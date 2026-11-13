@@ -3,9 +3,9 @@ name: MarkdownLive
 on:
   push:
     branches: ['**']
-    paths: ['MarkdownLive/**', '.github/workflows/markdownlive.yml', '.github/actions/**']
+    paths: ['MarkdownLive/**', '.github/workflows/markdownlive.yml', '.github/actions/**', 'shared/**']
   pull_request:
-    paths: ['MarkdownLive/**', '.github/workflows/markdownlive.yml', '.github/actions/**']
+    paths: ['MarkdownLive/**', '.github/workflows/markdownlive.yml', '.github/actions/**', 'shared/**']
   workflow_dispatch:
   workflow_call:
 

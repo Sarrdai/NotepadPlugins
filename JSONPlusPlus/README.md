@@ -39,6 +39,8 @@ saving always writes the compact form.
 - **Caret sync:** clicking in one view moves the caret in the other to the same JSON position.
 - **Panel editor:** uses Notepad++'s own JSON lexer and your theme colours (dark mode included). It
   also has folding, brace matching, indentation guides, line numbers and auto-indent.
+- **Paste from Explorer:** JSON files copied in Explorer (e.g. on a network drive) open with `Ctrl+V`,
+  directly from their location. Clipboards with text are pasted as usual.
 - Works when the document is shown in either view, after *Move/Clone to other view*, and for files
   that are not in the active tab.
 

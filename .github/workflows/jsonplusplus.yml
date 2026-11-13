@@ -3,9 +3,9 @@ name: JSON++
 on:
   push:
     branches: ['**']
-    paths: ['JSONPlusPlus/**', '.github/workflows/jsonplusplus.yml', '.github/actions/**']
+    paths: ['JSONPlusPlus/**', '.github/workflows/jsonplusplus.yml', '.github/actions/**', 'shared/**']
   pull_request:
-    paths: ['JSONPlusPlus/**', '.github/workflows/jsonplusplus.yml', '.github/actions/**']
+    paths: ['JSONPlusPlus/**', '.github/workflows/jsonplusplus.yml', '.github/actions/**', 'shared/**']
   workflow_dispatch:
   workflow_call:
 

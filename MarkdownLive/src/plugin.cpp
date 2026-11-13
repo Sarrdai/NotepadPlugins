@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "PasteFiles.h"
 #include "code_highlight.h"
 #include "commands.h"
 #include "editor.h"
@@ -39,6 +40,16 @@ PreviewPanel& panel() {
 
 std::wstring iniPath() {
     return configDirectory() + L"\\MarkdownLive.ini";
+}
+
+// Edit > Paste with files copied in Explorer: opens them when Markdown files are among them.
+bool openPastedFiles(const std::vector<std::wstring>& files) {
+    if (std::none_of(files.begin(), files.end(), isMarkdownPath)) return false;
+    for (const std::wstring& file : files) {
+        if (!nppshared::isDirectory(file))
+            SendMessageW(g_npp.nppHandle, NPPM_DOOPEN, 0, reinterpret_cast<LPARAM>(file.c_str()));
+    }
+    return true;
 }
 
 // ---- menu commands ------------------------------------------------------------------------
@@ -429,6 +440,7 @@ __declspec(dllexport) void beNotified(SCNotification* notification) {
     switch (notification->nmhdr.code) {
         case NPPN_READY:
             g_nppReady = true;
+            nppshared::PasteFilesHook::install(g_npp.nppHandle, &openPastedFiles);
             ToolPanel::instance().apply(g_settings.panel);
             applyAutoOpen();
             panel().onDocumentChanged(true);
@@ -477,6 +489,7 @@ __declspec(dllexport) void beNotified(SCNotification* notification) {
             break;
 
         case NPPN_SHUTDOWN:
+            nppshared::PasteFilesHook::uninstall();
             CodeHighlighter::instance().shutdown();
             panel().shutdown();
             ToolPanel::instance().shutdown();

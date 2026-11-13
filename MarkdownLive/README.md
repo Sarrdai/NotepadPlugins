@@ -19,6 +19,8 @@ libraries are bundled with the plugin – no internet connection is needed.
 - Local images (relative to the document); links open in the browser, `.md` files in Notepad++
 - Light/dark design follows the Notepad++ dark mode
 - Export as standalone **HTML** or as **PDF**
+- **Paste from Explorer:** Markdown files copied in Explorer (e.g. on a network drive) open with `Ctrl+V`, directly
+  from their location. Clipboards with text are pasted as usual.
 - **Pin**: the pin button at the top right of the preview (or *Pin Live Preview to Current File*) keeps the preview on
   the current document while other files are edited – e.g. a Markdown guide next to the source code. If the pinned
   document is visible (also in the second view), it is still updated live and scrolled in sync; a double click or

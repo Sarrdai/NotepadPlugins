@@ -14,6 +14,9 @@ Collection of Notepad++ plugins. Each plugin lives in its own folder with its ow
 - **Panels** are titled with the plugin name, close automatically when a document of another type is activated and
   reopen for the next matching document. The **pin** (in the panel and in the menu) keeps a panel open on its document.
 - **Toolbar button** for each panel, with icons for light and dark mode.
+- **Paste from Explorer:** files copied in Explorer (also on network drives) open with `Ctrl+V` when files of the
+  plugin's type are among them – directly from their location. Clipboards with text are pasted as usual. The C++
+  plugins share the implementation in `shared/cpp/PasteFiles.h`.
 - **Settings** are stored as `<Plugin>.ini` in the Notepad++ plugin config folder
   (`Settings > Open Plugins Config Folder`); WebView2 data of the panels lives there as well.
 
