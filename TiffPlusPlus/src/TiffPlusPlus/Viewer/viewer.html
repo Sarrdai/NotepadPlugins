@@ -59,7 +59,7 @@
     <button id="toggleContrast" title="Show/hide manual contrast controls (C)">Contrast</button>
     <span class="sep"></span>
     <label title="Invert gray values (I)"><input type="checkbox" id="invert">Invert</label>
-    <label title="Keep contrast and zoom when switching between images"><input type="checkbox" id="lock">Lock</label>
+    <label title="Keep contrast when switching between images (the visible section is always kept if possible)"><input type="checkbox" id="lock">Lock</label>
     <span class="sep"></span>
     <button id="save" title="Save the image with the current contrast as PNG">PNG</button>
     <button id="copy" title="Copy the image with the current contrast to the clipboard (Ctrl+C)">Copy</button>
@@ -82,7 +82,7 @@
       <option>2</option><option selected>5</option><option>10</option><option>20</option>
     </select>
     <span class="sep"></span>
-    <label title="Recompute auto contrast for every slice (otherwise contrast and zoom are kept while browsing)"><input type="checkbox" id="autoPerSlice">Auto per slice</label>
+    <label title="Recompute auto contrast for every slice (otherwise contrast is kept while browsing)"><input type="checkbox" id="autoPerSlice">Auto per slice</label>
     <button id="autoStack" title="Auto contrast from the histogram of sampled slices of the whole stack">Auto stack</button>
   </div>
 
@@ -139,6 +139,9 @@ const src = document.createElement("canvas"), sctx = src.getContext("2d");
 
 let img = null;                         // { name, w, h, format, data, maxValue, valueScale, min, max, hist }
 const view = { scale: 1, ox: 0, oy: 0 };
+// Section the user wants to see, in image coordinates ({ x, y, w, h }); null = whole image.
+// The view transform is derived from it, so panel resizes and image switches keep the section visible.
+let region = null;
 const win = { lo: 0, hi: 65535, gamma: 1, invert: false };
 let dirty = { lut: false, draw: false }, rafPending = false;
 let drag = null, spaceDown = false, mouse = null;
@@ -192,9 +195,11 @@ async function loadImage(msg) {
 
   const sameStack = msg.stack && stack && msg.stack.key === stack.key;
   const keep = prev && prev.format === img.format && ($("lock").checked || (sameStack && !$("autoPerSlice").checked));
-  const keepView = prev && prev.w === img.w && prev.h === img.h && ($("lock").checked || sameStack);
   if (!keep) autoContrast(false);
-  if (!keepView) fit();
+  // Keep the section when it still lies on the new image, otherwise show the whole image.
+  if (region && !(region.x + region.w / 2 >= 0 && region.x + region.w / 2 <= img.w
+                  && region.y + region.h / 2 >= 0 && region.y + region.h / 2 <= img.h)) region = null;
+  applyRegion();
   updateStackBar(msg.stack);
   updateContrastControls();
   showMessage("");
@@ -409,12 +414,27 @@ function draw() {
 
 // ---------------------------------------------------------------- view transform
 function fit() {
+  region = null;
+  applyRegion();
+}
+
+/** Scales and centers the requested section so it is completely visible in the panel. */
+function applyRegion() {
   if (!img) return;
   const cw = canvas.clientWidth, ch = canvas.clientHeight;
-  view.scale = Math.min(cw / img.w, ch / img.h) || 1;
-  view.ox = (cw - img.w * view.scale) / 2;
-  view.oy = (ch - img.h * view.scale) / 2;
+  if (!cw || !ch) return;   // not laid out yet; the resize observer applies it later
+  const r = region || { x: 0, y: 0, w: img.w, h: img.h };
+  view.scale = Math.min(64, cw / r.w, ch / r.h);
+  view.ox = cw / 2 - (r.x + r.w / 2) * view.scale;
+  view.oy = ch / 2 - (r.y + r.h / 2) * view.scale;
   invalidate(false);
+}
+
+/** Remembers the currently visible section after the user zoomed or panned. */
+function captureRegion() {
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  if (!img || !cw || !ch) return;
+  region = { x: -view.ox / view.scale, y: -view.oy / view.scale, w: cw / view.scale, h: ch / view.scale };
 }
 
 function zoomAt(factor, sx, sy) {
@@ -423,17 +443,16 @@ function zoomAt(factor, sx, sy) {
   view.ox = sx - (sx - view.ox) * scale / view.scale;
   view.oy = sy - (sy - view.oy) * scale / view.scale;
   view.scale = scale;
+  captureRegion();
   invalidate(false);
 }
 
 function zoomToBox(x0, y0, x1, y1) {
-  const cw = canvas.clientWidth, ch = canvas.clientHeight;
-  const ix0 = (Math.min(x0, x1) - view.ox) / view.scale, iy0 = (Math.min(y0, y1) - view.oy) / view.scale;
-  const iw = Math.abs(x1 - x0) / view.scale, ih = Math.abs(y1 - y0) / view.scale;
-  view.scale = Math.min(64, Math.min(cw / iw, ch / ih));
-  view.ox = cw / 2 - (ix0 + iw / 2) * view.scale;
-  view.oy = ch / 2 - (iy0 + ih / 2) * view.scale;
-  invalidate(false);
+  region = {
+    x: (Math.min(x0, x1) - view.ox) / view.scale, y: (Math.min(y0, y1) - view.oy) / view.scale,
+    w: Math.abs(x1 - x0) / view.scale, h: Math.abs(y1 - y0) / view.scale,
+  };
+  applyRegion();
 }
 
 function visibleImageRect() {
@@ -476,6 +495,7 @@ window.addEventListener("mousemove", e => {
   const dx = sx - drag.x0, dy = sy - drag.y0;
   if (drag.mode === "pan") {
     view.ox = drag.ox + dx; view.oy = drag.oy + dy;
+    captureRegion();
     invalidate(false);
   } else if (drag.mode === "box") {
     invalidate(false);
@@ -526,7 +546,7 @@ window.addEventListener("keydown", e => {
 });
 window.addEventListener("keyup", e => { if (e.key === " ") spaceDown = false; });
 
-new ResizeObserver(() => { invalidate(false); drawHistogram(); }).observe($("stage"));
+new ResizeObserver(() => { applyRegion(); invalidate(false); drawHistogram(); }).observe($("stage"));
 
 // ---------------------------------------------------------------- histogram dragging
 histCanvas.addEventListener("mousedown", e => {
