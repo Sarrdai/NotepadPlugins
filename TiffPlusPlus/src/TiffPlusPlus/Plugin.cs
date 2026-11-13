@@ -22,6 +22,7 @@ namespace TiffPlusPlus
         private static StackController _stacks;
         private static int _panelCmdIndex;
         private static int _highlightCmdIndex;
+        private static bool _ready;   // NPPN_READY received; commands run before only restore docked panels
 
         private static IntPtr _originalWndProc;
         private static Win32.WndProc _wndProcDelegate; // kept alive for the process lifetime
@@ -39,8 +40,10 @@ namespace TiffPlusPlus
 
             const byte VK_LEFT = 0x25, VK_RIGHT = 0x27;
             Commands.Add("Open TIFF XML...", Safe(OpenTiffFromDialog));
-            Commands.Add("Open TIFF stack (folder)...", Safe(OpenStackFromFolderDialog));
+            // Keep the panel at index 1: Notepad++ stores this index in config.xml to restore the docked
+            // panel at startup, and older versions registered the panel with id 1.
             _panelCmdIndex = Commands.Add("Image panel", Safe(ToggleImagePanel));
+            Commands.Add("Open TIFF stack (folder)...", Safe(OpenStackFromFolderDialog));
             Commands.Add("-", null);
             Commands.Add("Next slice", Safe(() => _stacks.Step(+1)), false, new ShortcutKey(false, true, false, VK_RIGHT));
             Commands.Add("Previous slice", Safe(() => _stacks.Step(-1)), false, new ShortcutKey(false, true, false, VK_LEFT));
@@ -63,6 +66,7 @@ namespace TiffPlusPlus
                         ToolbarIcon.Register(_host, Commands.GetCmdId(_panelCmdIndex));
                         break;
                     case NppMsg.NPPN_READY:
+                        _ready = true;
                         CleanupOldViewFiles();
                         break;
                     case NppMsg.NPPN_FILEOPENED:
@@ -179,6 +183,7 @@ namespace TiffPlusPlus
 
         private static void OpenStackFromFolderDialog()
         {
+            if (!_ready) return;   // never show the dialog while Notepad++ restores its window layout
             using (var dlg = new FolderBrowserDialog { Description = "Folder with TIFF images (top level only)" })
             {
                 if (dlg.ShowDialog() == DialogResult.OK)
