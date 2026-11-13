@@ -22,11 +22,12 @@ current image or stack until it is released or the panel is closed.
 | Zoom into a region | Left mouse button: drag a box |
 | Reset zoom | **Reset**, double click, `F` or `Esc` |
 | Zoom at mouse position | Mouse wheel, `+` / `-`, **1:1** for actual pixels |
+| Resize panel / switch image | The visible section is scaled to stay completely visible and is kept when switching images (if it lies on the new image) |
 | Pan | Middle mouse button, Shift+drag or Space+drag |
 | Auto contrast | Contrast panel: **Full** (whole image, `A`), **View** (visible region only, `V`), selectable clip percentage; **Full range** uses min..max and sets the clip to 0 % |
 | Manual contrast | Min/max sliders and number fields, drag the markers in the histogram, gamma |
 | Windowing like an X-ray viewer | Drag with the right mouse button: ↔ window width, ↕ level |
-| More | **Invert** (`I`), **Lock** (keep contrast/zoom when switching images), **PNG** (export with the current contrast), **Copy** (`Ctrl+C`, image with the current contrast to the clipboard), pixel value under the mouse in the status line |
+| More | **Invert** (`I`), **Lock** (keep contrast when switching images), **PNG** (export with the current contrast), **Copy** (`Ctrl+C`, image with the current contrast to the clipboard), pixel value under the mouse in the status line |
 
 New images start with auto contrast on the whole image.
 
@@ -43,7 +44,7 @@ before `img10`).
 | Highlight changes | Lines that differ from the previous slice are highlighted (can be switched off in the menu) |
 | Values across the stack | Caret on a value line (e.g. `<Voltage>`), then `Ctrl+Alt+V`: chart + table across all slices. More values are added as further charts. Clicking a point/row jumps to that slice |
 | CSV export | In the values window: semicolon separated, UTF-8, values unchanged from the XML |
-| Image panel | Slider, `Page Up`/`Page Down`, `Home`/`End`, play at 2–20 fps. Contrast and zoom are kept while browsing; optional *Auto per slice*; *Auto stack* computes the contrast from samples (12 slices) of the whole stack |
+| Image panel | Slider, `Page Up`/`Page Down`, `Home`/`End`, play at 2–20 fps. Contrast is kept while browsing; optional *Auto per slice*; *Auto stack* computes the contrast from samples (12 slices) of the whole stack |
 
 While browsing, only the XML of the current slice is read (header/IFD). The image panel only decodes the current slice
 and preloads its neighbours in the background (LRU cache, max. 768 MB on x64). Scroll and caret position in the XML tab
