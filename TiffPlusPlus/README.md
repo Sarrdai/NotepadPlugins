@@ -4,9 +4,6 @@ Notepad++ plugin for TIFF images (e.g. X-ray images) with embedded XML:
 
 - **Drop a file into Notepad++ → only the XML part is shown**, indented and with XML syntax highlighting.
   Only the TIFF header, the image file directory (IFD) and the XML tag are read – pixel data is never loaded.
-- **Paste from Explorer:** copy TIFF files or a folder in Explorer (e.g. on a network drive) and press `Ctrl+V` in
-  Notepad++ – they open like a drop, read directly from their location without copying them to the local disk.
-  Clipboards with text are pasted as usual.
 - **No XML?** The tab shows `NO XML FOUND` and lists the TIFF tags instead.
 - **Image panel (optional)** docked on the right, based on WebView2. The image is only loaded while the panel is visible.
 - Extensions: `.tiff`, `.tif` – case insensitive.
@@ -93,8 +90,6 @@ Optionally against a real file: set the environment variable `TIFFPP_SAMPLE` to 
 
 - **Drag & drop**: the plugin intercepts `WM_DROPFILES` in the Notepad++ main window before Notepad++ loads the binary
   file.
-- **Paste**: the plugin intercepts *Edit > Paste* (`IDM_EDIT_PASTE`) in the main window; if the clipboard holds a file
-  list (`CF_HDROP`, as copied in Explorer) with TIFFs or TIFF folders and no text, the files are opened like a drop.
 - **File > Open, command line, session restore**: Notepad++ loads the file itself; the plugin then immediately replaces
   the binary tab with the XML view (works, but is slower for large files). `Plugins > Tiff++ > Open TIFF...` is fast as
   well.

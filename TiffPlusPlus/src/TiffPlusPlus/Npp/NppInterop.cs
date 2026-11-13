@@ -161,7 +161,6 @@ namespace TiffPlusPlus.Npp
         public const uint NPPN_BUFFERACTIVATED = NPPN_FIRST + 10;
 
         public const int IDM_FILE_CLOSE = 41000 + 3;
-        public const int IDM_EDIT_PASTE = 42000 + 5;
         public const int L_XML = 9;
 
         // Docking manager
@@ -192,7 +191,6 @@ namespace TiffPlusPlus.Npp
     public static class Win32
     {
         public const int WM_DROPFILES = 0x0233;
-        public const int WM_COMMAND = 0x0111;
         public const int WM_NOTIFY = 0x004E;
         public const int GWLP_WNDPROC = -4;
 

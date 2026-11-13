@@ -6,14 +6,11 @@
 
 #include <windows.h>
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "JsonCore.h"
-#include "PasteFiles.h"
 #include "PluginInterface.h"
 #include "PrettyPanel.h"
 #include "Settings.h"
@@ -179,16 +176,6 @@ void evaluateActiveBuffer() {
         g_panel->hide();
     }
     updateMenuChecks();
-}
-
-// Edit > Paste with files copied in Explorer: opens them when JSON files are among them.
-bool openPastedFiles(const std::vector<std::wstring>& files) {
-    if (std::none_of(files.begin(), files.end(), [](const std::wstring& f) { return g_settings.matchesExtension(f); }))
-        return false;
-    for (const std::wstring& file : files) {
-        if (!nppshared::isDirectory(file)) npp(NPPM_DOOPEN, 0, reinterpret_cast<LPARAM>(file.c_str()));
-    }
-    return true;
 }
 
 void loadSettings() {
@@ -388,7 +375,6 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification* n) {
         case NPPN_READY:
             loadSettings();
             g_ready = true;
-            nppshared::PasteFilesHook::install(g_npp._nppHandle, &openPastedFiles);
             evaluateActiveBuffer();
             break;
         case NPPN_BUFFERACTIVATED:
@@ -425,7 +411,6 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification* n) {
             break;
         case NPPN_SHUTDOWN:
             g_ready = false;
-            nppshared::PasteFilesHook::uninstall();
             if (g_panel) g_panel->detach();
             break;
         default:

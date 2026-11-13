@@ -69,7 +69,6 @@ add_library(MarkdownLive SHARED
 set_target_properties(MarkdownLive PROPERTIES PREFIX "" OUTPUT_NAME "MarkdownLive")
 target_compile_definitions(MarkdownLive PRIVATE UNICODE _UNICODE NOMINMAX _WIN32_WINNT=0x0A00)
 target_include_directories(MarkdownLive SYSTEM PRIVATE "${WEBVIEW2_DIR}/build/native/include")
-target_include_directories(MarkdownLive PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../shared/cpp")
 target_link_libraries(MarkdownLive PRIVATE mdtext shlwapi gdiplus uxtheme ole32 comdlg32 shell32 user32 gdi32)
 
 if(MSVC)

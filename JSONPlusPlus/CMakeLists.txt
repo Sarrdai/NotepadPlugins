@@ -26,9 +26,9 @@ if(WIN32)
         src/plugin/PrettyPanel.cpp
         src/plugin/Settings.cpp
         src/plugin/JsonPlusPlus.rc)
-    target_include_directories(JsonPlusPlus PRIVATE src/plugin third_party/npp ${CMAKE_CURRENT_SOURCE_DIR}/../shared/cpp)
+    target_include_directories(JsonPlusPlus PRIVATE src/plugin third_party/npp)
     target_compile_definitions(JsonPlusPlus PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-    target_link_libraries(JsonPlusPlus PRIVATE jpp_core user32 gdi32 shell32)
+    target_link_libraries(JsonPlusPlus PRIVATE jpp_core user32 gdi32)
     set_target_properties(JsonPlusPlus PROPERTIES PREFIX "" OUTPUT_NAME "JsonPlusPlus")
     if(MSVC)
         set_property(TARGET JsonPlusPlus PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
