@@ -1,8 +1,9 @@
 // Bundles the preview page into web/dist (copied next to the plugin DLL as "assets").
 import { build } from 'esbuild';
 import { cp, mkdir, readFile, rm } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
-const outdir = new URL('./dist/', import.meta.url).pathname;
+const outdir = fileURLToPath(new URL('./dist/', import.meta.url));
 const katexPkg = JSON.parse(
   await readFile(new URL('./node_modules/katex/package.json', import.meta.url), 'utf8'),
 );
@@ -11,7 +12,7 @@ await rm(outdir, { recursive: true, force: true });
 await mkdir(outdir, { recursive: true });
 
 await build({
-  entryPoints: [new URL('./src/preview.js', import.meta.url).pathname],
+  entryPoints: [fileURLToPath(new URL('./src/preview.js', import.meta.url))],
   outdir,
   bundle: true,
   format: 'esm',
@@ -28,4 +29,4 @@ await build({
   logLevel: 'info',
 });
 
-await cp(new URL('./src/preview.html', import.meta.url).pathname, `${outdir}preview.html`);
+await cp(fileURLToPath(new URL('./src/preview.html', import.meta.url)), `${outdir}preview.html`);
