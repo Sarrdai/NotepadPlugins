@@ -1,0 +1,43 @@
+name: Upload plugin
+description: >
+  Verifies the Notepad++ exports of the plugin DLL, stages the files into a folder <name>/
+  (copied as-is into Notepad++\plugins) and uploads it as artifact <name>-<arch>.
+inputs:
+  name:
+    description: Plugin folder name (must match the DLL name)
+    required: true
+  arch:
+    description: Target architecture, part of the artifact name
+    default: x64
+  files:
+    description: Newline separated files/directories (wildcards allowed) to put into the plugin folder
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Stage plugin folder
+      shell: pwsh
+      env:
+        NAME: ${{ inputs.name }}
+        FILES: ${{ inputs.files }}
+      run: |
+        $dest = Join-Path $env:RUNNER_TEMP "plugin/$env:NAME"
+        New-Item -ItemType Directory -Force $dest | Out-Null
+        $env:FILES -split "`n" | ForEach-Object Trim | Where-Object { $_ } | ForEach-Object {
+          Copy-Item -Recurse -Path $_ -Destination $dest -ErrorAction Stop
+        }
+        Get-ChildItem -Recurse -File $dest | ForEach-Object { $_.FullName.Substring($dest.Length + 1) }
+
+    - name: Verify native exports
+      shell: pwsh
+      env:
+        DLL: ${{ runner.temp }}/plugin/${{ inputs.name }}/${{ inputs.name }}.dll
+      run: |
+        python -m pip install --quiet pefile
+        python -c "import os,sys,pefile; pe=pefile.PE(os.environ['DLL']); n={e.name.decode() for e in pe.DIRECTORY_ENTRY_EXPORT.symbols if e.name}; m={'isUnicode','setInfo','getName','getFuncsArray','beNotified','messageProc'}-n; print('missing exports:', sorted(m)) if m else print('exports ok'); sys.exit(bool(m))"
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.name }}-${{ inputs.arch }}
+        path: ${{ runner.temp }}/plugin/
+        if-no-files-found: error

@@ -1,0 +1,41 @@
+name: MarkdownLive
+
+on:
+  push:
+    branches: ['**']
+    paths: ['MarkdownLive/**', '.github/workflows/markdownlive.yml', '.github/actions/**']
+  pull_request:
+    paths: ['MarkdownLive/**', '.github/workflows/markdownlive.yml', '.github/actions/**']
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build:
+    name: MarkdownLive (x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: MarkdownLive
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Preview bundle
+        working-directory: MarkdownLive/web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - run: cmake -S . -B build -A x64
+      - run: cmake --build build --config Release --parallel
+      - run: ctest --test-dir build -C Release --output-on-failure
+      - name: Preview tests (headless Chromium)
+        working-directory: MarkdownLive/web
+        run: |
+          npm install --no-save --no-audit --no-fund playwright
+          npx playwright install chromium
+          npm test
+      - uses: ./.github/actions/upload-plugin
+        with:
+          name: MarkdownLive
+          files: MarkdownLive/build/package/MarkdownLive/*

@@ -1,0 +1,42 @@
+name: JSON++
+
+on:
+  push:
+    branches: ['**']
+    paths: ['JSONPlusPlus/**', '.github/workflows/jsonplusplus.yml', '.github/actions/**']
+  pull_request:
+    paths: ['JSONPlusPlus/**', '.github/workflows/jsonplusplus.yml', '.github/actions/**']
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build:
+    name: JSON++ (x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: JSONPlusPlus
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -A x64
+      - run: cmake --build build --config Release --parallel
+      - run: ctest --test-dir build -C Release --output-on-failure
+      - uses: ./.github/actions/upload-plugin
+        with:
+          name: JsonPlusPlus
+          files: |
+            JSONPlusPlus/build/Release/JsonPlusPlus.dll
+            JSONPlusPlus/README.md
+            JSONPlusPlus/LICENSE
+
+  sanitizers:
+    name: JSON++ core tests (ASan/UBSan)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: JSONPlusPlus
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+      - run: cmake --build build -j
+      - run: ctest --test-dir build --output-on-failure

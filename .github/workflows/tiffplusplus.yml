@@ -1,0 +1,32 @@
+name: Tiff++
+
+on:
+  push:
+    branches: ['**']
+    paths: ['TiffPlusPlus/**', '.github/workflows/tiffplusplus.yml', '.github/actions/**']
+  pull_request:
+    paths: ['TiffPlusPlus/**', '.github/workflows/tiffplusplus.yml', '.github/actions/**']
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build:
+    name: Tiff++ (x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: TiffPlusPlus
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: microsoft/setup-msbuild@v2
+      - run: dotnet test tests/TiffPlusPlus.Tests
+      # Full-framework MSBuild is required for the native export rewriting (UnmanagedExports).
+      - run: msbuild src/TiffPlusPlus/TiffPlusPlus.csproj -restore -p:Configuration=Release -p:Platform=x64 -v:minimal
+      # Single file: the WebView2 parts are embedded in the plugin dll.
+      - uses: ./.github/actions/upload-plugin
+        with:
+          name: TiffPlusPlus
+          files: TiffPlusPlus/src/TiffPlusPlus/bin/x64/Release/TiffPlusPlus.dll

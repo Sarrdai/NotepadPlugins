@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{4ACF29CB-3445-46A4-ABA0-AD641568D62B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TiffPlusPlus", "src\TiffPlusPlus\TiffPlusPlus.csproj", "{9C1A8993-F788-4B35-BFFD-4A96C2F9816E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{60C68A9B-1893-42D8-9C48-CB9552ABEEDF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TiffPlusPlus.Tests", "tests\TiffPlusPlus.Tests\TiffPlusPlus.Tests.csproj", "{32AD91DD-BB7A-4910-8203-C99CAC6F621B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9C1A8993-F788-4B35-BFFD-4A96C2F9816E}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{9C1A8993-F788-4B35-BFFD-4A96C2F9816E}.Debug|Any CPU.Build.0 = Debug|x64
+		{9C1A8993-F788-4B35-BFFD-4A96C2F9816E}.Release|Any CPU.ActiveCfg = Release|x64
+		{9C1A8993-F788-4B35-BFFD-4A96C2F9816E}.Release|Any CPU.Build.0 = Release|x64
+		{32AD91DD-BB7A-4910-8203-C99CAC6F621B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32AD91DD-BB7A-4910-8203-C99CAC6F621B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32AD91DD-BB7A-4910-8203-C99CAC6F621B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32AD91DD-BB7A-4910-8203-C99CAC6F621B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9C1A8993-F788-4B35-BFFD-4A96C2F9816E} = {4ACF29CB-3445-46A4-ABA0-AD641568D62B}
+		{32AD91DD-BB7A-4910-8203-C99CAC6F621B} = {60C68A9B-1893-42D8-9C48-CB9552ABEEDF}
+	EndGlobalSection
+EndGlobal

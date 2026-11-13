@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TIFF Image</title>
+<style>
+  :root {
+    --bg: #1e1e1e; --panel: #252526; --border: #3c3c3c; --text: #d4d4d4; --muted: #8a8a8a;
+    --accent: #3794ff; --hist: #6a6a6a; --window: rgba(55, 148, 255, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 12px "Segoe UI", system-ui, sans-serif; overflow: hidden; user-select: none; }
+  body { display: flex; flex-direction: column; }
+  .bar { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 4px 6px;
+    background: var(--panel); border-bottom: 1px solid var(--border); }
+  .sep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; }
+  button, select, input[type=number] { background: #333; color: var(--text); border: 1px solid var(--border);
+    border-radius: 3px; font: inherit; height: 22px; }
+  button { padding: 0 7px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  input[type=number] { width: 64px; padding: 0 3px; }
+  label { display: inline-flex; align-items: center; gap: 3px; }
+  #contrast { padding: 4px 6px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  #contrast.hidden, #stackBar.hidden { display: none; }
+  #stackBar input[type=range] { flex: 1; min-width: 80px; }
+  #sliceLabel { min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+  #hist { width: 100%; height: 56px; display: block; cursor: ew-resize; background: #1a1a1a; }
+  .row { display: grid; grid-template-columns: 44px 1fr 70px; gap: 6px; align-items: center; margin-top: 3px; }
+  .row input[type=range] { width: 100%; }
+  #stage { position: relative; flex: 1; min-height: 0; }
+  #canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+  #canvas.pan { cursor: grabbing; }
+  #message { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 16px; color: var(--muted); pointer-events: none; }
+  #status { display: flex; gap: 12px; flex-wrap: wrap; padding: 3px 6px; background: var(--panel);
+    border-top: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+  #status b { color: var(--text); font-weight: normal; }
+  #help { position: absolute; right: 8px; top: 8px; max-width: 280px; padding: 8px 10px; background: rgba(37,37,38,.95);
+    border: 1px solid var(--border); border-radius: 4px; line-height: 1.5; display: none; }
+  #help.show { display: block; }
+  kbd { background: #333; border: 1px solid var(--border); border-radius: 2px; padding: 0 3px; font: 11px Consolas, monospace; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <button id="fit" title="Reset zoom / fit to panel (F, Esc, double click)">Reset</button>
+    <button id="one" title="Actual pixels (1)">1:1</button>
+    <button id="zoomOut" title="Zoom out (-)">&minus;</button>
+    <button id="zoomIn" title="Zoom in (+)">+</button>
+    <span class="sep"></span>
+    <button id="auto" title="Auto contrast on the whole image (A)">Auto</button>
+    <button id="autoView" title="Auto contrast on the visible region (V)">Auto view</button>
+    <button id="toggleContrast" title="Show/hide manual contrast controls (C)">Contrast</button>
+    <span class="sep"></span>
+    <label title="Invert gray values (I)"><input type="checkbox" id="invert">Invert</label>
+    <label title="Keep contrast and zoom when switching between images"><input type="checkbox" id="lock">Lock</label>
+    <span class="sep"></span>
+    <button id="save" title="Save the image with the current contrast as PNG">PNG</button>
+    <button id="helpBtn" title="Mouse and keyboard help">?</button>
+  </div>
+
+  <div id="stackBar" class="bar hidden">
+    <button id="sFirst" title="First slice (Home)">|&lsaquo;</button>
+    <button id="sPrev" title="Previous slice (Page Up)">&lsaquo;</button>
+    <input type="range" id="sliceRange" min="1" max="1" value="1" title="Slice">
+    <button id="sNext" title="Next slice (Page Down)">&rsaquo;</button>
+    <button id="sLast" title="Last slice (End)">&rsaquo;|</button>
+    <span id="sliceLabel"></span>
+    <button id="play" title="Play / pause (P)">&#9654;</button>
+    <select id="fps" title="Frames per second">
+      <option>2</option><option selected>5</option><option>10</option><option>20</option>
+    </select>
+    <span class="sep"></span>
+    <label title="Recompute auto contrast for every slice (otherwise contrast and zoom are kept while browsing)"><input type="checkbox" id="autoPerSlice">Auto per slice</label>
+    <button id="autoStack" title="Auto contrast from the histogram of sampled slices of the whole stack">Auto stack</button>
+  </div>
+
+  <div id="contrast">
+    <canvas id="hist" title="Drag the markers to adjust min/max, drag inside the window to move it"></canvas>
+    <div class="row"><span>Min</span><input type="range" id="loRange"><input type="number" id="loNum"></div>
+    <div class="row"><span>Max</span><input type="range" id="hiRange"><input type="number" id="hiNum"></div>
+    <div class="row"><span>Gamma</span><input type="range" id="gammaRange" min="-200" max="200" value="0"><input type="number" id="gammaNum" step="0.05" min="0.1" max="10" value="1"></div>
+    <div class="row" style="grid-template-columns: 44px auto auto 1fr">
+      <span>Clip</span>
+      <select id="clip" title="Percentage of darkest/brightest pixels ignored by auto contrast">
+        <option value="0">0 %</option><option value="0.1">0.1 %</option><option value="0.5" selected>0.5 %</option>
+        <option value="1">1 %</option><option value="2">2 %</option><option value="5">5 %</option>
+      </select>
+      <button id="fullRange" title="Use the full data range (min..max of the image)">Full range</button>
+      <span></span>
+    </div>
+  </div>
+
+  <div id="stage">
+    <canvas id="canvas"></canvas>
+    <div id="message">Loading viewer…</div>
+    <div id="help">
+      <b>Mouse</b><br>
+      Left drag: zoom into box<br>
+      Wheel: zoom at cursor<br>
+      Middle drag / Shift+drag / Space+drag: pan<br>
+      Right drag: window (&harr; width, &varr; level)<br>
+      Double click: reset zoom<br>
+      <b>Stack</b><br>
+      Slider, <kbd>PgUp</kbd>/<kbd>PgDn</kbd>, <kbd>Home</kbd>/<kbd>End</kbd>, <kbd>P</kbd> play<br>
+      <b>Keys</b><br>
+      <kbd>F</kbd>/<kbd>Esc</kbd> reset, <kbd>1</kbd> 1:1, <kbd>+</kbd>/<kbd>-</kbd> zoom,
+      <kbd>A</kbd> auto, <kbd>V</kbd> auto view, <kbd>I</kbd> invert, <kbd>C</kbd> contrast panel
+    </div>
+  </div>
+
+  <div id="status">
+    <span id="sName"></span><span id="sSize"></span><span id="sPixel"></span><span id="sZoom"></span><span id="sWindow"></span>
+  </div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const canvas = $("canvas"), ctx = canvas.getContext("2d");
+const histCanvas = $("hist"), hctx = histCanvas.getContext("2d");
+
+// Offscreen canvas holding the full image after contrast mapping (8-bit RGBA).
+const src = document.createElement("canvas"), sctx = src.getContext("2d");
+
+let img = null;                         // { name, w, h, format, data, maxValue, valueScale, min, max, hist }
+const view = { scale: 1, ox: 0, oy: 0 };
+const win = { lo: 0, hi: 65535, gamma: 1, invert: false };
+let dirty = { lut: false, draw: false }, rafPending = false;
+let drag = null, spaceDown = false, mouse = null;
+let stack = null, sliderActive = false, playing = false, playTimer = 0;
+
+const settings = loadSettings();
+$("clip").value = settings.clip;
+$("contrast").classList.toggle("hidden", !settings.showContrast);
+
+// ---------------------------------------------------------------- messages from the plugin
+if (window.chrome && chrome.webview) {
+  chrome.webview.addEventListener("message", e => onHostMessage(e.data));
+  chrome.webview.postMessage("ready");
+}
+
+function onHostMessage(msg) {
+  switch (msg.type) {
+    case "loading":
+      // Within a stack keep the current slice visible while the next one is decoded.
+      if (img && stack && msg.stackKey === stack.key) $("sName").textContent = "Loading " + msg.name + " …";
+      else showMessage("Loading " + msg.name + " …");
+      break;
+    case "image": loadImage(msg); break;
+    case "error": clearImage(); showMessage("Cannot display " + msg.name + "\n" + msg.message); break;
+    case "none": clearImage(); showMessage("The active document has no TIFF image."); break;
+    case "clear": clearImage(); showMessage(""); break;
+    case "window": $("sName").textContent = msg.text; setWindow(msg.lo, msg.hi); break;
+    case "status": $("sName").textContent = msg.text; break;
+  }
+}
+
+async function loadImage(msg) {
+  const buffer = await (await fetch(msg.url)).arrayBuffer();
+  const prev = img;
+  const gray = msg.format === "gray16";
+  img = {
+    name: msg.name, w: msg.width, h: msg.height, format: msg.format,
+    data: gray ? new Uint16Array(buffer) : new Uint8Array(buffer),
+    maxValue: gray ? 65535 : 255,
+    valueScale: gray && msg.sourceBits <= 8 ? 257 : 1,  // 8-bit sources were widened to 16 bit
+    sourceBits: msg.sourceBits, frames: msg.frames,
+  };
+  computeHistogram();
+  src.width = img.w; src.height = img.h;
+
+  const sameStack = msg.stack && stack && msg.stack.key === stack.key;
+  const keep = prev && prev.format === img.format && ($("lock").checked || (sameStack && !$("autoPerSlice").checked));
+  const keepView = prev && prev.w === img.w && prev.h === img.h && ($("lock").checked || sameStack);
+  if (!keep) autoContrast(false);
+  if (!keepView) fit();
+  updateStackBar(msg.stack);
+  updateContrastControls();
+  showMessage("");
+  $("sName").textContent = img.name;
+  $("sSize").textContent = `${img.w} × ${img.h}, ${img.sourceBits} bit` + (img.frames > 1 ? `, frame 1/${img.frames}` : "");
+  invalidate(true);
+}
+
+function clearImage() {
+  img = null;
+  updateStackBar(null);
+  src.width = src.height = 1;
+  ["sName", "sSize", "sPixel", "sZoom", "sWindow"].forEach(id => $(id).textContent = "");
+  invalidate(false);
+  drawHistogram();
+}
+
+function showMessage(text) {
+  $("message").textContent = text;
+  $("message").style.whiteSpace = "pre-line";
+}
+
+// ---------------------------------------------------------------- histogram & contrast
+function computeHistogram() {
+  const bins = new Uint32Array(img.maxValue + 1), d = img.data;
+  if (img.format === "gray16") {
+    for (let i = 0; i < d.length; i++) bins[d[i]]++;
+  } else {
+    // Luma histogram of BGRA data.
+    for (let i = 0; i < d.length; i += 4) bins[(d[i] * 29 + d[i + 1] * 150 + d[i + 2] * 77) >> 8]++;
+  }
+  let min = 0, max = img.maxValue;
+  while (min < max && bins[min] === 0) min++;
+  while (max > min && bins[max] === 0) max--;
+  // Histogram axis: ignore extreme outliers so the relevant gray range is not squeezed.
+  const [a, b] = percentiles(bins, img.w * img.h, 0.05), margin = Math.round((b - a) * 0.1);
+  Object.assign(img, { hist: bins, min, max, axisMin: Math.max(min, a - margin), axisMax: Math.min(max, b + margin) });
+}
+
+function percentiles(bins, total, clipPercent) {
+  const clip = total * clipPercent / 100;
+  let acc = 0, lo = 0, hi = bins.length - 1;
+  for (let v = 0; v < bins.length; v++) { acc += bins[v]; if (acc > clip) { lo = v; break; } }
+  acc = 0;
+  for (let v = bins.length - 1; v >= 0; v--) { acc += bins[v]; if (acc > clip) { hi = v; break; } }
+  return hi > lo ? [lo, hi] : [lo, Math.min(lo + 1, bins.length - 1)];
+}
+
+function autoContrast(redraw = true) {
+  if (!img) return;
+  [win.lo, win.hi] = percentiles(img.hist, img.w * img.h, +$("clip").value);
+  win.gamma = 1;
+  if (redraw) { updateContrastControls(); invalidate(true); }
+}
+
+/** Auto contrast computed only from the currently visible part of the image. */
+function autoContrastView() {
+  if (!img) return;
+  const r = visibleImageRect();
+  if (r.w <= 0 || r.h <= 0) return;
+  const step = Math.max(1, Math.floor(Math.sqrt(r.w * r.h / 1e6)));  // sample at most ~1M pixels
+  const bins = new Uint32Array(img.maxValue + 1), d = img.data;
+  let n = 0;
+  for (let y = r.y; y < r.y + r.h; y += step) {
+    for (let x = r.x; x < r.x + r.w; x += step) {
+      const i = y * img.w + x;
+      bins[img.format === "gray16" ? d[i] : (d[4 * i] * 29 + d[4 * i + 1] * 150 + d[4 * i + 2] * 77) >> 8]++;
+      n++;
+    }
+  }
+  [win.lo, win.hi] = percentiles(bins, n, +$("clip").value);
+  updateContrastControls();
+  invalidate(true);
+}
+
+function setWindow(lo, hi) {
+  const max = img ? img.maxValue : 65535;
+  lo = Math.round(Math.max(0, Math.min(max - 1, lo)));
+  hi = Math.round(Math.max(lo + 1, Math.min(max, hi)));
+  win.lo = lo; win.hi = hi;
+  updateContrastControls();
+  invalidate(true);
+}
+
+function updateContrastControls() {
+  if (!img) return;
+  const s = img.valueScale;
+  for (const [range, num, value] of [["loRange", "loNum", win.lo], ["hiRange", "hiNum", win.hi]]) {
+    $(range).min = Math.floor(img.min / s); $(range).max = Math.ceil(img.max / s);
+    $(range).value = Math.round(value / s);
+    $(num).min = 0; $(num).max = img.maxValue / s;
+    if (document.activeElement !== $(num)) $(num).value = Math.round(value / s);
+  }
+  $("gammaRange").value = Math.round(Math.log2(win.gamma) * 100);
+  if (document.activeElement !== $("gammaNum")) $("gammaNum").value = win.gamma.toFixed(2);
+  $("invert").checked = win.invert;
+  $("sWindow").textContent = `W ${Math.round(win.lo / s)}–${Math.round(win.hi / s)}` + (win.gamma !== 1 ? ` γ ${win.gamma.toFixed(2)}` : "");
+  drawHistogram();
+}
+
+function drawHistogram() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = histCanvas.clientWidth, h = histCanvas.clientHeight;
+  if (!w) return;
+  histCanvas.width = w * dpr; histCanvas.height = h * dpr;
+  hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  hctx.clearRect(0, 0, w, h);
+  if (!img) return;
+
+  const [a, b] = histDomain(), bins = new Float64Array(w);
+  for (let v = a; v <= b; v++) bins[Math.min(w - 1, Math.floor((v - a) / (b - a + 1) * w))] += img.hist[v];
+  let peak = 0;
+  for (const c of bins) peak = Math.max(peak, Math.log1p(c));
+  hctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--hist");
+  for (let x = 0; x < w; x++) {
+    const bh = peak ? Math.log1p(bins[x]) / peak * (h - 2) : 0;
+    hctx.fillRect(x, h - bh, 1, bh);
+  }
+  const xl = valueToHistX(win.lo), xh = valueToHistX(win.hi);
+  hctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--window");
+  hctx.fillRect(xl, 0, xh - xl, h);
+  hctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent");
+  hctx.lineWidth = 2;
+  hctx.beginPath();
+  hctx.moveTo(xl, 0); hctx.lineTo(xl, h); hctx.moveTo(xh, 0); hctx.lineTo(xh, h);
+  // transfer curve
+  for (let x = Math.max(0, xl); x <= Math.min(w, xh); x += 2) {
+    let t = (x - xl) / Math.max(1, xh - xl);
+    t = Math.pow(t, 1 / win.gamma);
+    if (win.invert) t = 1 - t;
+    if (x === Math.max(0, xl)) hctx.moveTo(x, h - t * h); else hctx.lineTo(x, h - t * h);
+  }
+  hctx.stroke();
+}
+
+function histDomain() {
+  // Show the relevant data range, extended to include the window markers.
+  const a = Math.min(img.axisMin, win.lo), b = Math.max(img.axisMax, win.hi);
+  return [a, Math.max(a + 1, b)];
+}
+const valueToHistX = v => { const [a, b] = histDomain(); return (v - a) / (b - a) * histCanvas.clientWidth; };
+const histXToValue = x => { const [a, b] = histDomain(); return a + x / histCanvas.clientWidth * (b - a); };
+
+// ---------------------------------------------------------------- rendering
+function invalidate(lut) {
+  dirty.lut = dirty.lut || lut;
+  dirty.draw = true;
+  if (!rafPending) { rafPending = true; requestAnimationFrame(render); }
+}
+
+function render() {
+  rafPending = false;
+  if (dirty.lut && img) applyLut();
+  dirty.lut = false;
+  if (dirty.draw) draw();
+  dirty.draw = false;
+}
+
+function buildLut(size) {
+  const lut = new Uint8Array(size), range = Math.max(1, win.hi - win.lo), invGamma = 1 / win.gamma;
+  for (let v = 0; v < size; v++) {
+    let t = (v - win.lo) / range;
+    t = t <= 0 ? 0 : t >= 1 ? 1 : Math.pow(t, invGamma);
+    if (win.invert) t = 1 - t;
+    lut[v] = Math.round(t * 255);
+  }
+  return lut;
+}
+
+function applyLut() {
+  const out = sctx.createImageData(img.w, img.h), d = img.data;
+  if (img.format === "gray16") {
+    const lut8 = buildLut(65536), lut = new Uint32Array(65536);
+    for (let v = 0; v < 65536; v++) { const g = lut8[v]; lut[v] = 0xFF000000 | g << 16 | g << 8 | g; }
+    const out32 = new Uint32Array(out.data.buffer);
+    for (let i = 0; i < d.length; i++) out32[i] = lut[d[i]];
+  } else {
+    const lut = buildLut(256), o = out.data;
+    for (let i = 0; i < d.length; i += 4) {
+      o[i] = lut[d[i + 2]]; o[i + 1] = lut[d[i + 1]]; o[i + 2] = lut[d[i]]; o[i + 3] = 255;
+    }
+  }
+  sctx.putImageData(out, 0, 0);
+}
+
+function draw() {
+  const dpr = window.devicePixelRatio || 1;
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  if (canvas.width !== Math.round(cw * dpr) || canvas.height !== Math.round(ch * dpr)) {
+    canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!img) return;
+
+  ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, dpr * view.ox, dpr * view.oy);
+  ctx.imageSmoothingEnabled = view.scale < 1;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(src, 0, 0);
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (drag && drag.mode === "box") {
+    const x = Math.min(drag.x0, drag.x), y = Math.min(drag.y0, drag.y);
+    ctx.fillStyle = "rgba(55,148,255,0.15)";
+    ctx.strokeStyle = "#3794ff";
+    ctx.lineWidth = 1;
+    ctx.fillRect(x, y, Math.abs(drag.x - drag.x0), Math.abs(drag.y - drag.y0));
+    ctx.strokeRect(x + 0.5, y + 0.5, Math.abs(drag.x - drag.x0), Math.abs(drag.y - drag.y0));
+  }
+  $("sZoom").textContent = `${(view.scale * 100).toFixed(view.scale < 0.1 ? 1 : 0)} %`;
+}
+
+// ---------------------------------------------------------------- view transform
+function fit() {
+  if (!img) return;
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  view.scale = Math.min(cw / img.w, ch / img.h) || 1;
+  view.ox = (cw - img.w * view.scale) / 2;
+  view.oy = (ch - img.h * view.scale) / 2;
+  invalidate(false);
+}
+
+function zoomAt(factor, sx, sy) {
+  if (!img) return;
+  const scale = Math.min(64, Math.max(0.01, view.scale * factor));
+  view.ox = sx - (sx - view.ox) * scale / view.scale;
+  view.oy = sy - (sy - view.oy) * scale / view.scale;
+  view.scale = scale;
+  invalidate(false);
+}
+
+function zoomToBox(x0, y0, x1, y1) {
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  const ix0 = (Math.min(x0, x1) - view.ox) / view.scale, iy0 = (Math.min(y0, y1) - view.oy) / view.scale;
+  const iw = Math.abs(x1 - x0) / view.scale, ih = Math.abs(y1 - y0) / view.scale;
+  view.scale = Math.min(64, Math.min(cw / iw, ch / ih));
+  view.ox = cw / 2 - (ix0 + iw / 2) * view.scale;
+  view.oy = ch / 2 - (iy0 + ih / 2) * view.scale;
+  invalidate(false);
+}
+
+function visibleImageRect() {
+  const x0 = Math.max(0, Math.floor(-view.ox / view.scale)), y0 = Math.max(0, Math.floor(-view.oy / view.scale));
+  const x1 = Math.min(img.w, Math.ceil((canvas.clientWidth - view.ox) / view.scale));
+  const y1 = Math.min(img.h, Math.ceil((canvas.clientHeight - view.oy) / view.scale));
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+function updatePixelInfo(sx, sy) {
+  if (!img) return;
+  const x = Math.floor((sx - view.ox) / view.scale), y = Math.floor((sy - view.oy) / view.scale);
+  if (x < 0 || y < 0 || x >= img.w || y >= img.h) { $("sPixel").textContent = ""; return; }
+  const i = y * img.w + x, d = img.data;
+  const value = img.format === "gray16" ? Math.round(d[i] / img.valueScale) : `R${d[4 * i + 2]} G${d[4 * i + 1]} B${d[4 * i]}`;
+  $("sPixel").innerHTML = `x <b>${x}</b> y <b>${y}</b> = <b>${value}</b>`;
+}
+
+// ---------------------------------------------------------------- mouse & keyboard on the image
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+
+canvas.addEventListener("mousedown", e => {
+  if (!img) return;
+  const pan = e.button === 1 || (e.button === 0 && (e.shiftKey || spaceDown));
+  const mode = pan ? "pan" : e.button === 0 ? "box" : e.button === 2 ? "window" : null;
+  if (!mode) return;
+  e.preventDefault();
+  drag = { mode, x0: e.offsetX, y0: e.offsetY, x: e.offsetX, y: e.offsetY,
+           ox: view.ox, oy: view.oy, lo: win.lo, hi: win.hi };
+  canvas.classList.toggle("pan", mode === "pan");
+});
+
+window.addEventListener("mousemove", e => {
+  const r = canvas.getBoundingClientRect();
+  const sx = e.clientX - r.left, sy = e.clientY - r.top;
+  mouse = { x: sx, y: sy };
+  updatePixelInfo(sx, sy);
+  if (!drag) return;
+  drag.x = sx; drag.y = sy;
+  const dx = sx - drag.x0, dy = sy - drag.y0;
+  if (drag.mode === "pan") {
+    view.ox = drag.ox + dx; view.oy = drag.oy + dy;
+    invalidate(false);
+  } else if (drag.mode === "box") {
+    invalidate(false);
+  } else if (drag.mode === "window") {
+    const k = (img.max - img.min + 1) / Math.max(200, canvas.clientWidth);
+    const width = Math.max(1, (drag.hi - drag.lo) + dx * k * 2);
+    const level = (drag.lo + drag.hi) / 2 - dy * k;
+    setWindow(level - width / 2, level + width / 2);
+  }
+});
+
+window.addEventListener("mouseup", () => {
+  if (!drag) return;
+  const d = drag;
+  drag = null;
+  canvas.classList.remove("pan");
+  if (d.mode === "box" && Math.abs(d.x - d.x0) > 4 && Math.abs(d.y - d.y0) > 4) zoomToBox(d.x0, d.y0, d.x, d.y);
+  else invalidate(false);
+});
+
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  zoomAt(Math.pow(1.2, -Math.sign(e.deltaY)), e.offsetX, e.offsetY);
+}, { passive: false });
+
+canvas.addEventListener("dblclick", fit);
+
+window.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" && e.target.type === "number") return;
+  const cx = mouse ? mouse.x : canvas.clientWidth / 2, cy = mouse ? mouse.y : canvas.clientHeight / 2;
+  switch (e.key) {
+    case " ": spaceDown = true; e.preventDefault(); break;
+    case "f": case "F": case "Escape": fit(); break;
+    case "1": actualSize(); break;
+    case "+": case "=": zoomAt(1.25, cx, cy); break;
+    case "-": zoomAt(0.8, cx, cy); break;
+    case "a": case "A": autoContrast(); break;
+    case "v": case "V": autoContrastView(); break;
+    case "i": case "I": win.invert = !win.invert; updateContrastControls(); invalidate(true); break;
+    case "c": case "C": toggleContrastPanel(); break;
+    case "PageDown": requestSlice(stack && stack.index + 1); e.preventDefault(); break;
+    case "PageUp": requestSlice(stack && stack.index - 1); e.preventDefault(); break;
+    case "Home": requestSlice(0); e.preventDefault(); break;
+    case "End": requestSlice(stack && stack.count - 1); e.preventDefault(); break;
+    case "p": case "P": togglePlay(); break;
+  }
+});
+window.addEventListener("keyup", e => { if (e.key === " ") spaceDown = false; });
+
+new ResizeObserver(() => { invalidate(false); drawHistogram(); }).observe($("stage"));
+
+// ---------------------------------------------------------------- histogram dragging
+histCanvas.addEventListener("mousedown", e => {
+  if (!img) return;
+  const xl = valueToHistX(win.lo), xh = valueToHistX(win.hi), x = e.offsetX;
+  let target = Math.abs(x - xl) <= 6 ? "lo" : Math.abs(x - xh) <= 6 ? "hi" : null;
+  if (!target) target = x > xl && x < xh ? "move" : (Math.abs(x - xl) < Math.abs(x - xh) ? "lo" : "hi");
+  const start = { x, lo: win.lo, hi: win.hi };
+  const move = ev => {
+    const hx = ev.clientX - histCanvas.getBoundingClientRect().left;
+    const dv = histXToValue(hx) - histXToValue(start.x);
+    if (target === "lo") setWindow(Math.min(histXToValue(hx), win.hi - 1), win.hi);
+    else if (target === "hi") setWindow(win.lo, Math.max(histXToValue(hx), win.lo + 1));
+    else setWindow(start.lo + dv, start.hi + dv);
+  };
+  const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
+  window.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", up);
+  if (target !== "move") move(e);
+});
+
+// ---------------------------------------------------------------- toolbar
+$("fit").onclick = fit;
+$("one").onclick = actualSize;
+$("zoomIn").onclick = () => zoomAt(1.25, canvas.clientWidth / 2, canvas.clientHeight / 2);
+$("zoomOut").onclick = () => zoomAt(0.8, canvas.clientWidth / 2, canvas.clientHeight / 2);
+$("auto").onclick = () => autoContrast();
+$("autoView").onclick = autoContrastView;
+$("toggleContrast").onclick = toggleContrastPanel;
+$("fullRange").onclick = () => img && setWindow(img.min, img.max);
+$("invert").onchange = e => { win.invert = e.target.checked; updateContrastControls(); invalidate(true); };
+$("clip").onchange = e => { settings.clip = e.target.value; saveSettings(); autoContrast(); };
+$("helpBtn").onclick = () => $("help").classList.toggle("show");
+$("save").onclick = savePng;
+
+$("loRange").oninput = e => img && setWindow(Math.min(+e.target.value * img.valueScale, win.hi - 1), win.hi);
+$("hiRange").oninput = e => img && setWindow(win.lo, Math.max(+e.target.value * img.valueScale, win.lo + 1));
+$("loNum").onchange = e => img && setWindow(+e.target.value * img.valueScale, win.hi);
+$("hiNum").onchange = e => img && setWindow(win.lo, +e.target.value * img.valueScale);
+$("gammaRange").oninput = e => { win.gamma = Math.pow(2, +e.target.value / 100); updateContrastControls(); invalidate(true); };
+$("gammaNum").onchange = e => {
+  win.gamma = Math.min(10, Math.max(0.1, +e.target.value || 1));
+  updateContrastControls(); invalidate(true);
+};
+
+// ---------------------------------------------------------------- stack navigation
+function updateStackBar(info) {
+  const changedStack = !info || !stack || info.key !== stack.key;
+  stack = info;
+  $("stackBar").classList.toggle("hidden", !info);
+  if (!info) { stopPlay(); return; }
+  if (changedStack) stopPlay();
+  $("sliceRange").max = info.count;
+  if (!sliderActive) $("sliceRange").value = info.index + 1;
+  $("sliceLabel").textContent = `${info.index + 1} / ${info.count}`;
+  if (playing) {
+    clearTimeout(playTimer);
+    playTimer = setTimeout(() => requestSlice((stack.index + 1) % stack.count), 1000 / +$("fps").value);
+  }
+}
+
+/** Slices are switched by the plugin, so the XML tab and the image always stay in sync. */
+function requestSlice(index) {
+  if (!stack || index == null) return;
+  index = Math.max(0, Math.min(stack.count - 1, index));
+  if (index !== stack.index) chrome.webview.postMessage({ type: "slice", index });
+}
+
+function togglePlay() {
+  if (!stack) return;
+  playing = !playing;
+  $("play").innerHTML = playing ? "&#10074;&#10074;" : "&#9654;";
+  if (playing) requestSlice((stack.index + 1) % stack.count);
+}
+
+function stopPlay() {
+  playing = false;
+  clearTimeout(playTimer);
+  $("play").innerHTML = "&#9654;";
+}
+
+$("sliceRange").addEventListener("pointerdown", () => sliderActive = true);
+window.addEventListener("pointerup", () => sliderActive = false);
+$("sliceRange").oninput = e => requestSlice(+e.target.value - 1);
+$("sFirst").onclick = () => requestSlice(0);
+$("sPrev").onclick = () => requestSlice(stack && stack.index - 1);
+$("sNext").onclick = () => requestSlice(stack && stack.index + 1);
+$("sLast").onclick = () => requestSlice(stack && stack.count - 1);
+$("play").onclick = togglePlay;
+$("autoStack").onclick = () => chrome.webview.postMessage({ type: "autoStack", clip: +$("clip").value });
+
+function actualSize() {
+  zoomAt(1 / view.scale, mouse ? mouse.x : canvas.clientWidth / 2, mouse ? mouse.y : canvas.clientHeight / 2);
+}
+
+function toggleContrastPanel() {
+  settings.showContrast = !settings.showContrast;
+  saveSettings();
+  $("contrast").classList.toggle("hidden", !settings.showContrast);
+  drawHistogram();
+}
+
+function savePng() {
+  if (!img) return;
+  if (dirty.lut) render();
+  src.toBlob(blob => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = img.name.replace(/\.tiff?$/i, "") + ".png";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }, "image/png");
+}
+
+// ---------------------------------------------------------------- settings (per user, browser storage)
+function loadSettings() {
+  const defaults = { clip: "0.5", showContrast: true };
+  try { return Object.assign(defaults, JSON.parse(localStorage.getItem("npptiff.settings") || "{}")); }
+  catch { return defaults; }
+}
+function saveSettings() {
+  try { localStorage.setItem("npptiff.settings", JSON.stringify(settings)); } catch { /* storage unavailable */ }
+}
+</script>
+</body>
+</html>

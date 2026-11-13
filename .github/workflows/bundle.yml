@@ -1,0 +1,48 @@
+name: Bundle
+
+# Builds all plugins and combines them into NotepadPlugins-x64: its content goes as-is into Notepad++\plugins.
+# A tag v* additionally publishes a release with the bundle and the single plugin zips.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  jsonplusplus:
+    uses: ./.github/workflows/jsonplusplus.yml
+  tiffplusplus:
+    uses: ./.github/workflows/tiffplusplus.yml
+  markdownlive:
+    uses: ./.github/workflows/markdownlive.yml
+
+  bundle:
+    name: Bundle (x64)
+    needs: [jsonplusplus, tiffplusplus, markdownlive]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-x64'
+          path: bundle
+          merge-multiple: true
+      - run: find bundle -type f | sort
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NotepadPlugins-x64
+          path: bundle/
+          if-no-files-found: error
+
+      - name: Release zips
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: bundle
+        run: |
+          mkdir ../release
+          for d in */; do zip -qr "../release/${d%/}-x64.zip" "$d"; done
+          zip -qr ../release/NotepadPlugins-x64.zip .
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: release/*.zip
+          generate_release_notes: true
