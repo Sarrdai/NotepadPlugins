@@ -46,7 +46,7 @@ saving always writes the compact form.
 
 1. Download the artifact `JsonPlusPlus-x64` (workflow *JSON++*) or the bundle `NotepadPlugins-x64`
    (workflow *Bundle*) from GitHub Actions or the [releases](../../releases).
-2. Extract it and copy the folder `JsonPlusPlus` into `<Notepad++>\plugins\`, so that
+2. Extract it and copy the folder `JsonPlusPlus` (DLL, README, LICENSE) into `<Notepad++>\plugins\`, so that
    `plugins\JsonPlusPlus\JsonPlusPlus.dll` exists. The folder name must match the DLL name.
 3. Restart Notepad++. The plugin appears under **Plugins → JSON++**.
 
@@ -54,17 +54,18 @@ Requires Notepad++ **8.4 or newer** (Scintilla 5 / Lexilla, `NPPM_CREATELEXER`).
 
 ## Menu
 
-The panel belongs to its file: switching to another tab closes it, switching back reopens it.
+The panel belongs to its file: switching to another tab closes it, switching back reopens it (like
+the panels of Markdown Live and Tiff++).
 **Pin** (right end of the panel's status row) keeps it open on its file while you work in other tabs;
 closing the panel or the file releases the pin.
 
 | Command | Description |
 |---|---|
-| Show pretty view for current file | Turns the panel on or off for the active file. Overrides the automatic detection. |
-| Pin pretty view to current file | Keeps the panel on its file while other tabs are active (same as **Pin** in the panel's status row). |
-| Open automatically for compact JSON | Turns automatic activation on or off. |
-| Synchronise caret | Keeps the caret of both views on the same JSON position. |
-| Re-indent pretty view now | Writes pending edits and re-indents the panel immediately. |
+| Toggle Pretty View | Turns the panel on or off for the active file (also via the toolbar button). Overrides the automatic detection. |
+| Pin Pretty View to Current File | Keeps the panel on its file while other tabs are active (same as **Pin** in the panel's status row). |
+| Re-indent Pretty View Now | Writes pending edits and re-indents the panel immediately. |
+| Open Automatically for Compact JSON | Turns automatic activation on or off. |
+| Synchronize Caret | Keeps the caret of both views on the same JSON position. |
 | Settings... | Opens `JsonPlusPlus.ini` in Notepad++. Changes apply when you save it. |
 
 ## Settings (`plugins\config\JsonPlusPlus.ini`)
@@ -144,5 +145,5 @@ third_party/   Notepad++ plugin headers (GPL) and Scintilla headers
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE). The headers in `third_party/npp` come from the
+GPL-3.0-or-later, see `LICENSE`. The headers in `third_party/npp` come from the
 Notepad++ project.

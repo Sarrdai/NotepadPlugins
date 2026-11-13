@@ -1,96 +1,112 @@
-# Tiff++ – TIFF-XML-Viewer für Notepad++
+# Tiff++ – TIFF XML viewer for Notepad++
 
-Notepad++-Plugin für TIFF-Bilder (z. B. Röntgenbilder) mit eingebettetem XML:
+Notepad++ plugin for TIFF images (e.g. X-ray images) with embedded XML:
 
-- **Datei in Notepad++ ziehen → nur der XML-Teil wird angezeigt**, eingerückt und mit XML-Syntax-Highlighting.
-  Gelesen werden nur TIFF-Header, Verzeichnis (IFD) und der XML-Tag – die Pixeldaten werden nie geladen.
-- **Kein XML vorhanden?** Der Tab zeigt den Hinweis `NO XML FOUND` und listet stattdessen die TIFF-Tags auf.
-- **Bild-Panel (optional)** rechts andockbar, basierend auf WebView2. Das Bild wird nur geladen, solange das Panel sichtbar ist.
-- Endungen: `.tiff`, `.tif` – Groß-/Kleinschreibung egal.
+- **Drop a file into Notepad++ → only the XML part is shown**, indented and with XML syntax highlighting.
+  Only the TIFF header, the image file directory (IFD) and the XML tag are read – pixel data is never loaded.
+- **No XML?** The tab shows `NO XML FOUND` and lists the TIFF tags instead.
+- **Image panel (optional)** docked on the right, based on WebView2. The image is only loaded while the panel is visible.
+- Extensions: `.tiff`, `.tif` – case insensitive.
 
-## Bild-Panel
+## Image panel
 
-`Plugins > Tiff++ > Image panel` oder der Bild-Button in der Toolbar blendet das Panel ein/aus. Es zeigt immer das Bild des aktiven Tabs.
+`Plugins > Tiff++ > Toggle Image Panel` or the toolbar button shows/hides the panel. It always shows the image of the
+active tab.
 
-Wechselt man zu einem Dokument ohne TIFF, schließt sich das Panel automatisch und öffnet sich beim
-Zurückwechseln zu einem TIFF wieder (ungespeicherte Dokumente ohne Endung lassen es offen). Der Pin
-oben rechts hält das Panel offen und auf dem aktuellen Bild bzw. Stack, bis er gelöst oder das Panel
-geschlossen wird.
+Switching to a document without a TIFF closes the panel; switching back to a TIFF reopens it (unsaved documents without
+extension keep it open). The pin at the top right (or `Pin Image Panel to Current Image`) keeps the panel open on the
+current image or stack until it is released or the panel is closed.
 
-| Aktion | Bedienung |
+| Action | How |
 |---|---|
-| In Bereich zoomen | Linke Maustaste: Kasten aufziehen |
-| Zoom zurücksetzen | **Reset**, Doppelklick, `F` oder `Esc` |
-| Zoomen an Mausposition | Mausrad, `+` / `-`, **1:1** für Originalpixel |
-| Verschieben | Mittlere Maustaste, Shift+Ziehen oder Leertaste+Ziehen |
-| Autokontrast | **Auto** (ganzes Bild, `A`), **Auto view** (nur sichtbarer Ausschnitt, `V`), Clip-Prozent wählbar |
-| Kontrast manuell | Min/Max-Regler und Zahlenfelder, Marker im Histogramm ziehen, Gamma |
-| Fensterung wie im Röntgen-Viewer | Rechte Maustaste ziehen: ↔ Fensterbreite, ↕ Level |
-| Weitere | **Invert** (`I`), **Lock** (Kontrast/Zoom beim Bildwechsel behalten), **PNG** (Export mit aktuellem Kontrast), Pixelwert unter der Maus in der Statuszeile |
+| Zoom into a region | Left mouse button: drag a box |
+| Reset zoom | **Reset**, double click, `F` or `Esc` |
+| Zoom at mouse position | Mouse wheel, `+` / `-`, **1:1** for actual pixels |
+| Pan | Middle mouse button, Shift+drag or Space+drag |
+| Auto contrast | Contrast panel: **Full** (whole image, `A`), **View** (visible region only, `V`), selectable clip percentage; **Full range** uses min..max and sets the clip to 0 % |
+| Manual contrast | Min/max sliders and number fields, drag the markers in the histogram, gamma |
+| Windowing like an X-ray viewer | Drag with the right mouse button: ↔ window width, ↕ level |
+| More | **Invert** (`I`), **Lock** (keep contrast/zoom when switching images), **PNG** (export with the current contrast), **Copy** (`Ctrl+C`, image with the current contrast to the clipboard), pixel value under the mouse in the status line |
 
-## Image Stacks
+New images start with auto contrast on the whole image.
 
-Einen **Ordner** (nur oberste Ebene) oder **mehrere TIFFs** in Notepad++ ziehen öffnet einen einzigen Stack-Tab
-(`<Name> [stack].xml`) statt vieler Tabs – vergleichbar mit einem virtuellen Stack in ImageJ. Alternativ:
-`Open TIFF stack (folder)...` bzw. Mehrfachauswahl in `Open TIFF XML...`. Sortierung natürlich nach Dateiname (`img2` vor `img10`).
+## Image stacks
 
-| Funktion | Bedienung |
+Dropping a **folder** (top level only) or **several TIFFs** into Notepad++ opens a single stack tab
+(`<name> [stack].xml`) instead of many tabs – similar to a virtual stack in ImageJ. Alternatively:
+`Open TIFF Stack (Folder)...` or a multiple selection in `Open TIFF...`. Files are sorted naturally by name (`img2`
+before `img10`).
+
+| Feature | How |
 |---|---|
-| Schicht wechseln (XML-Tab) | `Alt+→` / `Alt+←` (anpassbar über *Einstellungen > Tastenkürzel*) |
-| Änderungen hervorheben | Zeilen, die sich zur vorherigen Schicht unterscheiden, sind farbig hinterlegt (abschaltbar im Menü) |
-| Werte über den Stack | Cursor auf eine Wertzeile (z. B. `<Voltage>`), dann `Ctrl+Alt+V`: Diagramm + Tabelle über alle Schichten. Weitere Werte kommen als zusätzliche Diagramme hinzu. Klick auf Punkt/Zeile springt zur Schicht |
-| CSV-Export | Im Werte-Fenster: Semikolon-getrennt, UTF-8, Werte unverändert aus dem XML |
-| Bild-Panel | Slider, `Bild↑`/`Bild↓`, `Pos1`/`Ende`, Play mit 2–20 fps. Kontrast und Zoom bleiben beim Blättern erhalten; optional *Auto per slice*; *Auto stack* berechnet den Kontrast aus Stichproben (12 Schichten) des ganzen Stacks |
+| Switch slices (XML tab) | `Alt+→` / `Alt+←` (customizable in *Settings > Shortcut Mapper*) |
+| Highlight changes | Lines that differ from the previous slice are highlighted (can be switched off in the menu) |
+| Values across the stack | Caret on a value line (e.g. `<Voltage>`), then `Ctrl+Alt+V`: chart + table across all slices. More values are added as further charts. Clicking a point/row jumps to that slice |
+| CSV export | In the values window: semicolon separated, UTF-8, values unchanged from the XML |
+| Image panel | Slider, `Page Up`/`Page Down`, `Home`/`End`, play at 2–20 fps. Contrast and zoom are kept while browsing; optional *Auto per slice*; *Auto stack* computes the contrast from samples (12 slices) of the whole stack |
 
-Beim Blättern wird nur das XML der jeweiligen Schicht gelesen (Header/IFD). Das Bild-Panel dekodiert nur die aktuelle
-Schicht und lädt die Nachbarn im Hintergrund vor (LRU-Cache, max. 768 MB bei x64). Scroll- und Cursorposition im
-XML-Tab bleiben beim Wechsel erhalten, sodass man dieselbe Stelle über alle Schichten verfolgen kann.
+While browsing, only the XML of the current slice is read (header/IFD). The image panel only decodes the current slice
+and preloads its neighbours in the background (LRU cache, max. 768 MB on x64). Scroll and caret position in the XML tab
+are kept when switching, so the same spot can be followed across all slices.
 
-Alle Funktionen liegen unter einem Menüeintrag: `Plugins > Tiff++`.
+All commands are in one menu: `Plugins > Tiff++`.
+
+## Settings
+
+Stored in `TiffPlusPlus.ini` in the Notepad++ plugin config folder (`Settings > Open Plugins Config Folder`):
+highlighting of changed lines, clip percentage and whether the contrast panel is expanded.
 
 ## Installation
 
-1. Build-Artefakt `TiffPlusPlus-x64` (Workflow *Tiff++*) bzw. das Bundle `NotepadPlugins-x64`
-   (Workflow *Bundle*) aus GitHub Actions herunterladen oder selbst bauen (siehe unten).
-2. Den Ordner `TiffPlusPlus` (enthält nur `TiffPlusPlus.dll`) nach `%ProgramFiles%\Notepad++\plugins\` kopieren.
-   Den alten Ordner `plugins\NppTiffXml` aus früheren Versionen löschen.
-3. Notepad++ neu starten.
+1. Download the artifact `TiffPlusPlus-x64` (workflow *Tiff++*) or the bundle `NotepadPlugins-x64`
+   (workflow *Bundle*) from GitHub Actions, or build it yourself (see below).
+2. Copy the folder `TiffPlusPlus` (`TiffPlusPlus.dll`, README, LICENSE) to `%ProgramFiles%\Notepad++\plugins\`.
+   Delete the folder `plugins\NppTiffXml` of earlier versions.
+3. Restart Notepad++.
 
-Voraussetzungen: Windows 10/11 mit .NET Framework 4.8 und Microsoft Edge WebView2 Runtime (beides bei Windows 11 vorinstalliert).
+Requirements: Windows 10/11 with .NET Framework 4.8 and the Microsoft Edge WebView2 Runtime (both preinstalled on
+Windows 11).
 
-## Bauen
+## Building
 
-Im Ordner `TiffPlusPlus/` (CI: `.github/workflows/tiffplusplus.yml` im Repository-Root):
+In the folder `TiffPlusPlus/` (CI: `.github/workflows/tiffplusplus.yml` in the repository root):
 
 ```bash
 msbuild src/TiffPlusPlus/TiffPlusPlus.csproj -restore -p:Configuration=Release -p:Platform=x64
 ```
 
-Wichtig ist `msbuild` aus Visual Studio bzw. den Build Tools (nicht `dotnet build`): Nur damit werden die nativen
-Exporte für Notepad++ erzeugt. `dotnet build` kompiliert nur (z. B. unter Linux).
+Use `msbuild` from Visual Studio or the Build Tools (not `dotnet build`): only it creates the native exports for
+Notepad++. `dotnet build` only compiles (e.g. on Linux).
 
-Tests der TIFF-/XML-Logik (laufen auch unter Linux):
+Tests of the TIFF/XML logic (also run on Linux):
 
 ```bash
 dotnet test tests/TiffPlusPlus.Tests
 ```
 
-Optional gegen eine echte Datei: Umgebungsvariable `TIFFPP_SAMPLE` auf den Pfad setzen.
+Optionally against a real file: set the environment variable `TIFFPP_SAMPLE` to its path.
 
-## Funktionsweise
+## How it works
 
-- **Drag & Drop**: Das Plugin fängt `WM_DROPFILES` im Notepad++-Hauptfenster ab, bevor Notepad++ die Binärdatei lädt.
-- **Datei > Öffnen, Kommandozeile, Sitzungswiederherstellung**: Notepad++ lädt die Datei hier selbst; das Plugin
-  ersetzt den Binär-Tab danach sofort durch die XML-Ansicht (funktioniert, ist aber bei großen Dateien langsamer).
-  Schnell geht es auch über `Plugins > Tiff++ > Open TIFF XML...`.
-- **XML-Suche**: Alle TIFF-Tags vom Typ BYTE/ASCII/SBYTE/UNDEFINED, deren Inhalt mit `<` beginnt (z. B. privater Tag 50635,
-  XMP 700, ImageDescription 270). Fallback: `<?xml` in den letzten 4 MB der Datei. Classic TIFF und BigTIFF, II und MM.
-- **Anzeige**: Das XML wird in eine schreibgeschützte Datei `%TEMP%\TiffPlusPlus\<hash>\<Bildname>.xml` geschrieben und geöffnet
-  (Tab-Name = Bildname, Highlighting über die Endung). Eine `.source`-Datei daneben merkt sich das Original-TIFF
-  für das Bild-Panel. Einträge älter als 14 Tage werden beim Start entfernt.
-- **Eine Datei**: Die WebView2-Wrapper (`Microsoft.Web.WebView2.Core/WinForms.dll`) sind in die Plugin-DLL eingebettet und
-  werden aus dem Speicher geladen. Der native `WebView2Loader.dll` wird beim ersten Öffnen des Panels nach
-  `%LOCALAPPDATA%\TiffPlusPlus\loader\<x64|x86>` entpackt. Die Browser-Engine selbst ist die in Windows installierte WebView2-Runtime.
-- **Bilddekodierung**: Windows Imaging Component (unkomprimiert, LZW, Deflate, PackBits, JPEG). 16-Bit-Graustufen
-  werden unverändert an den Viewer übergeben; Kontrast/Gamma werden per Lookup-Table im WebView berechnet.
-  Bei mehrseitigen TIFFs wird die erste Seite angezeigt.
+- **Drag & drop**: the plugin intercepts `WM_DROPFILES` in the Notepad++ main window before Notepad++ loads the binary
+  file.
+- **File > Open, command line, session restore**: Notepad++ loads the file itself; the plugin then immediately replaces
+  the binary tab with the XML view (works, but is slower for large files). `Plugins > Tiff++ > Open TIFF...` is fast as
+  well.
+- **XML search**: all TIFF tags of type BYTE/ASCII/SBYTE/UNDEFINED whose content starts with `<` (e.g. private tag
+  50635, XMP 700, ImageDescription 270). Fallback: `<?xml` in the last 4 MB of the file. Classic TIFF and BigTIFF, II
+  and MM.
+- **Display**: the XML is written to a read-only file `%TEMP%\TiffPlusPlus\<hash>\<image name>.xml` and opened (tab
+  name = image name, highlighting by extension). A `.source` file next to it remembers the original TIFF for the image
+  panel. Entries older than 14 days are removed at startup.
+- **Single file**: the WebView2 wrappers (`Microsoft.Web.WebView2.Core/WinForms.dll`) are embedded in the plugin DLL
+  and loaded from memory. The native `WebView2Loader.dll` is extracted to `%LOCALAPPDATA%\TiffPlusPlus\loader\<x64|x86>`
+  when the panel is opened for the first time. The browser engine itself is the WebView2 Runtime installed in Windows;
+  its data folder is `TiffPlusPlus\WebView2` in the plugin config folder.
+- **Image decoding**: Windows Imaging Component (uncompressed, LZW, Deflate, PackBits, JPEG). 16-bit grayscale is passed
+  to the viewer unchanged; contrast/gamma are applied with a lookup table in the WebView. Multi-page TIFFs show the
+  first page.
+
+## License
+
+GPL-3.0-or-later, see `LICENSE`.
