@@ -12,6 +12,11 @@ Notepad++-Plugin für TIFF-Bilder (z. B. Röntgenbilder) mit eingebettetem XML:
 
 `Plugins > Tiff++ > Image panel` oder der Bild-Button in der Toolbar blendet das Panel ein/aus. Es zeigt immer das Bild des aktiven Tabs.
 
+Wechselt man zu einem Dokument ohne TIFF, schließt sich das Panel automatisch und öffnet sich beim
+Zurückwechseln zu einem TIFF wieder (ungespeicherte Dokumente ohne Endung lassen es offen). Der Pin
+oben rechts hält das Panel offen und auf dem aktuellen Bild bzw. Stack, bis er gelöst oder das Panel
+geschlossen wird.
+
 | Aktion | Bedienung |
 |---|---|
 | In Bereich zoomen | Linke Maustaste: Kasten aufziehen |

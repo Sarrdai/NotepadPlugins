@@ -32,6 +32,8 @@ namespace TiffPlusPlus.Viewer
         private ImagePanelForm _form;
         private IntPtr _tbDataPtr;
         private bool _active;
+        private bool _autoClosed;      // hidden because a non-TIFF document was activated
+        private ImageContext _pinned;  // shown regardless of the active tab while set
 
         /// <param name="commandIndex">Menu index of the panel command; Notepad++ calls it to restore the panel at startup.</param>
         public ImagePanelHost(NppHost npp, int commandIndex, Func<ImageContext> currentContext, Action<string, int> sliceRequested)
@@ -47,37 +49,97 @@ namespace TiffPlusPlus.Viewer
             if (_form == null)
             {
                 _form = new ImagePanelForm();
-                _form.PanelClosed += () => SetActive(false);
+                _form.PanelClosed += () => { _autoClosed = false; SetActive(false); };
                 _form.SliceRequested += (key, index) => _sliceRequested(key, index);
+                _form.PinToggled += TogglePin;
                 RegisterDockingPanel();   // Notepad++ shows the panel on registration
                 SetActive(true);
                 return;
             }
 
-            if (_active)
+            _autoClosed = false;
+            SetVisible(!_active);
+        }
+
+        /// <summary>
+        /// Called when another tab was activated: an unpinned panel closes for other documents and
+        /// reopens when a TIFF is activated again (unsaved documents without extension keep it).
+        /// </summary>
+        public void OnDocumentActivated()
+        {
+            if (_form == null || _pinned != null)
             {
-                Win32.SendMessage(_npp.Handle, NppMsg.NPPM_DMMHIDE, IntPtr.Zero, _form.Handle);
-                SetActive(false);
+                Refresh();
+                return;
+            }
+
+            bool hasImage = _currentContext() != null;
+            string path = _npp.GetPathFromBufferId(_npp.CurrentBufferId);
+            if (_active && !hasImage && Path.HasExtension(path ?? ""))
+            {
+                SetVisible(false);
+                _autoClosed = true;
+            }
+            else if (!_active && hasImage && _autoClosed)
+            {
+                SetVisible(true);
             }
             else
             {
-                Win32.SendMessage(_npp.Handle, NppMsg.NPPM_DMMSHOW, IntPtr.Zero, _form.Handle);
-                SetActive(true);
+                Refresh();
             }
         }
 
-        /// <summary>Called when the active tab or the active slice changed.</summary>
+        /// <summary>Called when the active slice changed.</summary>
         public void Refresh()
         {
-            if (_active) _form.ShowImage(_currentContext());
+            if (_active) _form.ShowImage(EffectiveContext());
+        }
+
+        private void SetVisible(bool visible)
+        {
+            Win32.SendMessage(_npp.Handle, visible ? NppMsg.NPPM_DMMSHOW : NppMsg.NPPM_DMMHIDE, IntPtr.Zero, _form.Handle);
+            SetActive(visible);
         }
 
         private void SetActive(bool active)
         {
             _active = active;
+            if (active) _autoClosed = false;
+            else SetPinned(null);   // a pin only lives as long as the panel is open
             Plugin.SetPanelChecked(active);
-            if (active) _form.ShowImage(_currentContext());
+            if (active) _form.ShowImage(EffectiveContext());
             else _form.Unload();   // free pixel memory while the panel is hidden
+        }
+
+        /// <summary>The pinned image, or the image of the active tab. A pinned stack follows its slice changes.</summary>
+        private ImageContext EffectiveContext()
+        {
+            ImageContext current = _currentContext();
+            if (_pinned == null) return current;
+            if (current != null && string.Equals(current.StackKey, _pinned.StackKey, StringComparison.OrdinalIgnoreCase)
+                && (current.IsStack || string.Equals(current.ImagePath, _pinned.ImagePath, StringComparison.OrdinalIgnoreCase)))
+                _pinned = current;
+            return _pinned;
+        }
+
+        private void TogglePin()
+        {
+            if (_pinned != null)
+            {
+                SetPinned(null);
+                OnDocumentActivated();   // unpinned: the active tab decides again
+                return;
+            }
+            SetPinned(_active ? _currentContext() : null);
+        }
+
+        private void SetPinned(ImageContext context)
+        {
+            _pinned = context;
+            string name = context == null ? null
+                : Path.GetFileName(context.IsStack ? Path.GetDirectoryName(context.ImagePath) : context.ImagePath);
+            _form?.SetPinned(context != null, name);
         }
 
         private void RegisterDockingPanel()
@@ -116,8 +178,12 @@ namespace TiffPlusPlus.Viewer
         private PixelImage _image;
         private int _loadSequence;
 
+        private bool _pinned;
+        private string _pinnedName;
+
         public event Action PanelClosed;
         public event Action<string, int> SliceRequested;
+        public event Action PinToggled;
 
         public ImagePanelForm()
         {
@@ -132,6 +198,15 @@ namespace TiffPlusPlus.Viewer
             if (_initTask == null) _initTask = InitializeWebViewAsync();
             if (_viewerReady) LoadRequestedImage();
         }
+
+        public void SetPinned(bool pinned, string name)
+        {
+            _pinned = pinned;
+            _pinnedName = name;
+            if (_viewerReady) PostPinState();
+        }
+
+        private void PostPinState() => Post(new { type = "pin", pinned = _pinned, name = _pinnedName });
 
         public void Unload()
         {
@@ -194,6 +269,7 @@ namespace TiffPlusPlus.Viewer
             {
                 _viewerReady = true;
                 _loadedPath = null;
+                PostPinState();
                 LoadRequestedImage();
                 return;
             }
@@ -204,6 +280,9 @@ namespace TiffPlusPlus.Viewer
             {
                 case "slice" when _context?.IsStack == true:
                     SliceRequested?.Invoke(_context.StackKey, Convert.ToInt32(message["index"]));
+                    break;
+                case "togglePin":
+                    PinToggled?.Invoke();
                     break;
                 case "autoStack" when _context?.IsStack == true:
                     AutoContrastStack(_context, Convert.ToDouble(message["clip"], System.Globalization.CultureInfo.InvariantCulture));

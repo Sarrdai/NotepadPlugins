@@ -68,13 +68,15 @@ namespace TiffPlusPlus
                     case NppMsg.NPPN_READY:
                         _ready = true;
                         CleanupOldViewFiles();
+                        _panelHost?.OnDocumentActivated();   // a restored panel closes if no TIFF is active
                         break;
                     case NppMsg.NPPN_FILEOPENED:
                         OnFileOpened(header.IdFrom);
                         break;
                     case NppMsg.NPPN_BUFFERACTIVATED:
                         _stacks.TryGetActive(out _, out _);   // rebuilds restored stacks and their highlighting
-                        _panelHost?.Refresh();
+                        if (_ready) _panelHost?.OnDocumentActivated();
+                        else _panelHost?.Refresh();
                         break;
                     case NppMsg.NPPN_SHUTDOWN:
                         _stacks.CloseAll();
