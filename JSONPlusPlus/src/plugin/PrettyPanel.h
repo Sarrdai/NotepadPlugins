@@ -56,6 +56,10 @@ public:
     void onSettingsChanged();
     void onViewUpdateUI(HWND view, int updated);
 
+    // Pin button in the status row: `onClicked` is called on click, `setPinned` shows the state.
+    void setPinHandler(std::function<void()> onClicked) { _onPinClicked = std::move(onClicked); }
+    void setPinned(bool pinned);
+
 private:
     static LRESULT CALLBACK windowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     LRESULT handleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
@@ -89,6 +93,9 @@ private:
 
     HWND _hwnd = nullptr;
     HWND _status = nullptr;
+    HWND _pin = nullptr;
+    bool _pinned = false;
+    std::function<void()> _onPinClicked;
     HFONT _statusFont = nullptr;
     HBRUSH _backBrush = nullptr;
     COLORREF _statusFore = RGB(0, 0, 0);

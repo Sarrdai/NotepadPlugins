@@ -24,7 +24,7 @@ FuncItem g_menu[MenuCount];
 bool g_menuInitialized = false;
 bool g_nppReady = false;
 bool g_autoOpened = false;  // the preview was opened by the "auto-open" option
-bool g_autoClosed = false;  // the preview was hidden by the "auto-close" option
+bool g_autoClosed = false;  // the preview was hidden because another document was activated
 HWND g_messageWindow = nullptr;
 ToolbarIconsWithDarkMode g_toolbarIcons;
 
@@ -64,8 +64,9 @@ void cmdSmartEnter() {
     g_settings.save();
 }
 
-// Shows / hides the preview after another document was activated, according to the options
-// "open automatically" and "close for other files". A pinned preview is never touched.
+// Shows / hides the preview after another document was activated: it always closes for other
+// files and reopens for the next Markdown file ("open automatically" also opens it the first
+// time). A pinned preview is never touched.
 void applyAutoOpen() {
     if (!g_nppReady || panel().pinned()) return;
     const std::wstring path = currentFilePath();
@@ -81,7 +82,7 @@ void applyAutoOpen() {
     if (!panel().visible()) return;
     if (g_settings.autoOpen && g_autoOpened) {
         panel().hide();
-    } else if (g_settings.autoClose && !extensionOf(path).empty()) {  // unsaved documents keep the preview
+    } else if (!extensionOf(path).empty()) {  // unsaved documents keep the preview
         panel().hide();
         g_autoClosed = true;
     }
@@ -90,14 +91,6 @@ void applyAutoOpen() {
 void cmdAutoOpen() {
     g_settings.autoOpen = !g_settings.autoOpen;
     setMenuCheck(MenuAutoOpen, g_settings.autoOpen);
-    g_settings.save();
-    applyAutoOpen();
-}
-
-void cmdAutoClose() {
-    g_settings.autoClose = !g_settings.autoClose;
-    g_autoClosed = false;
-    setMenuCheck(MenuAutoClose, g_settings.autoClose);
     g_settings.save();
     applyAutoOpen();
 }
@@ -174,7 +167,6 @@ void initMenu() {
     addItem(MenuSyncScroll, L"Synchronize Scrolling", cmdSyncScroll, nullptr, g_settings.syncScroll);
     addItem(MenuSmartEnter, L"Continue Lists on Enter", cmdSmartEnter, nullptr, g_settings.smartEnter);
     addItem(MenuAutoOpen, L"Open Preview Automatically for Markdown Files", cmdAutoOpen, nullptr, g_settings.autoOpen);
-    addItem(MenuAutoClose, L"Close Preview for Other Files", cmdAutoClose, nullptr, g_settings.autoClose);
     addItem(MenuHighlightCode, L"Highlight Code Blocks in Editor", cmdHighlightCode, nullptr, g_settings.highlightCode);
     addItem(MenuPanelTop, L"Tool Panel: Top", cmdPanelTop, nullptr, g_settings.panel == PanelPosition::Top);
     addItem(MenuPanelBottom, L"Tool Panel: Bottom", cmdPanelBottom, nullptr, g_settings.panel == PanelPosition::Bottom);
@@ -262,7 +254,6 @@ void Settings::load() {
     syncScroll = GetPrivateProfileIntW(L"Settings", L"SyncScroll", 1, ini.c_str()) != 0;
     smartEnter = GetPrivateProfileIntW(L"Settings", L"SmartEnter", 1, ini.c_str()) != 0;
     autoOpen = GetPrivateProfileIntW(L"Settings", L"AutoOpen", 0, ini.c_str()) != 0;
-    autoClose = GetPrivateProfileIntW(L"Settings", L"AutoClose", 0, ini.c_str()) != 0;
     highlightCode = GetPrivateProfileIntW(L"Settings", L"HighlightCode", 1, ini.c_str()) != 0;
     const UINT position = GetPrivateProfileIntW(L"Settings", L"Panel", 0, ini.c_str());
     panel = position == 1 ? PanelPosition::Top : position == 2 ? PanelPosition::Bottom : PanelPosition::Hidden;
@@ -273,7 +264,6 @@ void Settings::save() const {
     WritePrivateProfileStringW(L"Settings", L"SyncScroll", syncScroll ? L"1" : L"0", ini.c_str());
     WritePrivateProfileStringW(L"Settings", L"SmartEnter", smartEnter ? L"1" : L"0", ini.c_str());
     WritePrivateProfileStringW(L"Settings", L"AutoOpen", autoOpen ? L"1" : L"0", ini.c_str());
-    WritePrivateProfileStringW(L"Settings", L"AutoClose", autoClose ? L"1" : L"0", ini.c_str());
     WritePrivateProfileStringW(L"Settings", L"HighlightCode", highlightCode ? L"1" : L"0", ini.c_str());
     WritePrivateProfileStringW(L"Settings", L"Panel", std::to_wstring(static_cast<int>(panel)).c_str(), ini.c_str());
 }
@@ -293,7 +283,6 @@ bool menuItemChecked(MenuIndex index) {
         case MenuSyncScroll: return g_settings.syncScroll;
         case MenuSmartEnter: return g_settings.smartEnter;
         case MenuAutoOpen: return g_settings.autoOpen;
-        case MenuAutoClose: return g_settings.autoClose;
         case MenuHighlightCode: return g_settings.highlightCode;
         case MenuPinPreview: return panel().pinned();
         case MenuPanelTop: return g_settings.panel == PanelPosition::Top;

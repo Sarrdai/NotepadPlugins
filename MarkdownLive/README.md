@@ -26,6 +26,9 @@ keine Internetverbindung benötigt.
   (auch in der zweiten Ansicht), wird es weiterhin live aktualisiert und synchron gescrollt; ein
   Doppelklick oder Abhaken in der Vorschau holt es nach vorn. Der Titel des Panels zeigt das
   angepinnte Dokument. Erneutes Klicken, Schließen der Vorschau oder des Dokuments hebt den Pin auf.
+- **Automatisches Schließen**: Beim Wechsel auf eine Nicht-Markdown-Datei schließt sich die
+  Vorschau und öffnet sich bei der nächsten Markdown-Datei wieder (wie das Bild-Panel von Tiff++).
+  Ungespeicherte Dokumente ohne Endung lassen sie offen; nur der Pin hält sie für andere Dateien fest.
 
 **Code-Highlighting im Editor**
 
@@ -71,7 +74,6 @@ Die Optionen am Ende des Menüs werden gespeichert:
 | Synchronize Scrolling | an | Editor und Vorschau scrollen gemeinsam |
 | Continue Lists on Enter | an | Listenfortsetzung (siehe oben) |
 | Open Preview Automatically for Markdown Files | aus | Vorschau beim Wechsel auf eine Markdown-Datei öffnen (und für andere Dateien wieder schließen) |
-| Close Preview for Other Files | aus | Vorschau beim Wechsel auf eine Nicht-Markdown-Datei schließen und bei der nächsten Markdown-Datei wieder öffnen; ungespeicherte Dokumente und eine angepinnte Vorschau bleiben unberührt |
 | Highlight Code Blocks in Editor | an | Code-Highlighting in Codeblöcken (siehe oben) |
 
 Weitere Tastenkürzel lassen sich unter *Einstellungen → Tastatur → Plugin-Befehle* vergeben.
@@ -134,7 +136,7 @@ Unter Linux baut derselbe CMake-Aufruf nur die Unit-Tests der Textlogik.
   Listenfortsetzung, Einstellungen)
 - Die Einbettung der WebView2-Laufzeit selbst lässt sich unter Wine nicht ausführen und ist
   daher nur kompiliert, aber noch nicht auf einem echten Windows-System gelaufen.
-- Anpinnen, „Close Preview for Other Files“ und Code-Highlighting im Editor: Erkennung der
+- Anpinnen, automatisches Schließen und Code-Highlighting im Editor: Erkennung der
   Codeblöcke, Sprachzuordnung und das Lesen der Notepad++-Konfiguration sind per Unit-Test
   abgedeckt, die Pin-Schaltfläche per Browser-Test; das Zusammenspiel mit Notepad++ ist bisher nur
   kompiliert und noch nicht in Notepad++ selbst gelaufen.

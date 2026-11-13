@@ -133,12 +133,17 @@ bool PrettyPanel::create(int dockCommandIndex, std::function<void()> onClosedByU
     _status = ::CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_ENDELLIPSIS |
                                                        SS_CENTERIMAGE,
                                 0, 0, 100, 20, _hwnd, nullptr, _module, nullptr);
+    _pin = ::CreateWindowExW(0, L"STATIC", L"Pin", WS_CHILD | WS_VISIBLE | SS_CENTER | SS_NOPREFIX | SS_CENTERIMAGE |
+                                                    SS_NOTIFY,
+                             0, 0, 60, 20, _hwnd, nullptr, _module, nullptr);
     NONCLIENTMETRICSW metrics{};
     metrics.cbSize = sizeof(metrics);
     if (::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0)) {
         _statusFont = ::CreateFontIndirectW(&metrics.lfStatusFont);
         ::SendMessageW(_status, WM_SETFONT, reinterpret_cast<WPARAM>(_statusFont), FALSE);
+        ::SendMessageW(_pin, WM_SETFONT, reinterpret_cast<WPARAM>(_statusFont), FALSE);
     }
+    setPinned(false);
 
     setupEditor();
     applyTheme();
@@ -327,6 +332,7 @@ void PrettyPanel::applyTheme() {
     _backBrush = ::CreateSolidBrush(_statusBack);
     if (_hwnd) ::InvalidateRect(_hwnd, nullptr, TRUE);
     if (_status) ::InvalidateRect(_status, nullptr, TRUE);
+    if (_pin) ::InvalidateRect(_pin, nullptr, TRUE);
     _lineNumberDigits = 0;
     updateLineNumberWidth();
 }
@@ -530,6 +536,13 @@ void PrettyPanel::validateNow() {
     status += L"  •  " + withThousands(static_cast<std::size_t>(_mirror.call(SCI_GETLENGTH))) + L" bytes compact";
     if (_mirror.call(SCI_GETREADONLY)) status += L"  •  read-only";
     setStatus(status, false);
+}
+
+void PrettyPanel::setPinned(bool pinned) {
+    _pinned = pinned;
+    if (!_pin) return;
+    ::SetWindowTextW(_pin, pinned ? L"\u25CF Pinned" : L"Pin");
+    ::InvalidateRect(_pin, nullptr, TRUE);
 }
 
 void PrettyPanel::setStatus(const std::wstring& text, bool error) {
@@ -743,8 +756,10 @@ void PrettyPanel::layout() {
     const int statusHeight = scale(_hwnd, 22);
     const int width = rc.right - rc.left;
     const int height = std::max(0, static_cast<int>(rc.bottom - rc.top) - statusHeight);
+    const int pinWidth = std::min(width, scale(_hwnd, 64));
     ::MoveWindow(_editor.hwnd(), 0, 0, width, height, TRUE);
-    ::MoveWindow(_status, 0, height, width, statusHeight, TRUE);
+    ::MoveWindow(_status, 0, height, width - pinWidth, statusHeight, TRUE);
+    ::MoveWindow(_pin, width - pinWidth, height, pinWidth, statusHeight, TRUE);
 }
 
 LRESULT CALLBACK PrettyPanel::windowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -776,7 +791,25 @@ LRESULT PrettyPanel::handleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             ::FillRect(reinterpret_cast<HDC>(wParam), &rc, _backBrush ? _backBrush : ::GetSysColorBrush(COLOR_BTNFACE));
             return 1;
         }
+        case WM_COMMAND:
+            if (reinterpret_cast<HWND>(lParam) == _pin && HIWORD(wParam) == STN_CLICKED) {
+                if (_onPinClicked) _onPinClicked();
+                return 0;
+            }
+            break;
+        case WM_SETCURSOR:
+            if (reinterpret_cast<HWND>(wParam) == _pin) {
+                ::SetCursor(::LoadCursorW(nullptr, IDC_HAND));
+                return TRUE;
+            }
+            break;
         case WM_CTLCOLORSTATIC:
+            if (reinterpret_cast<HWND>(lParam) == _pin) {
+                auto dc = reinterpret_cast<HDC>(wParam);
+                ::SetTextColor(dc, _pinned ? RGB(0x30, 0x8C, 0xE8) : _statusFore);
+                ::SetBkColor(dc, _statusBack);
+                return reinterpret_cast<LRESULT>(_backBrush ? _backBrush : ::GetSysColorBrush(COLOR_BTNFACE));
+            }
             if (reinterpret_cast<HWND>(lParam) == _status) {
                 auto dc = reinterpret_cast<HDC>(wParam);
                 ::SetTextColor(dc, _statusError ? RGB(0xE0, 0x30, 0x30) : _statusFore);

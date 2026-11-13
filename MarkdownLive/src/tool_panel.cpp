@@ -57,7 +57,7 @@ const Item kItems[] = {
     {kSeparator, nullptr},
     {MenuExportHtml, L"HTML"},    {MenuExportPdf, L"PDF"},     {kSeparator, nullptr},
     {MenuSyncScroll, nullptr},    {MenuSmartEnter, nullptr},   {MenuAutoOpen, nullptr},
-    {MenuAutoClose, nullptr},     {MenuHighlightCode, nullptr},
+    {MenuHighlightCode, nullptr},
 };
 constexpr int kItemCount = static_cast<int>(sizeof(kItems) / sizeof(kItems[0]));
 constexpr int kChevronIndex = kItemCount;  // hit test result for the "more" button
@@ -336,12 +336,6 @@ void drawGlyph(Gdiplus::Graphics& g, int command, const Gdiplus::RectF& box, COL
             g.FillPolygon(&brush, triangle, 3);
             break;
         }
-        case MenuAutoClose:
-            // preview window with a cross
-            splitWindow();
-            line(9.75f, 6, 12.75f, 10);
-            line(12.75f, 6, 9.75f, 10);
-            break;
         case MenuPinPreview: {
             // push pin, tilted
             const Gdiplus::GraphicsState state = g.Save();

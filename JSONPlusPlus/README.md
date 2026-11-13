@@ -54,9 +54,14 @@ Requires Notepad++ **8.4 or newer** (Scintilla 5 / Lexilla, `NPPM_CREATELEXER`).
 
 ## Menu
 
+The panel belongs to its file: switching to another tab closes it, switching back reopens it.
+**Pin** (right end of the panel's status row) keeps it open on its file while you work in other tabs;
+closing the panel or the file releases the pin.
+
 | Command | Description |
 |---|---|
 | Show pretty view for current file | Turns the panel on or off for the active file. Overrides the automatic detection. |
+| Pin pretty view to current file | Keeps the panel on its file while other tabs are active (same as **Pin** in the panel's status row). |
 | Open automatically for compact JSON | Turns automatic activation on or off. |
 | Synchronise caret | Keeps the caret of both views on the same JSON position. |
 | Re-indent pretty view now | Writes pending edits and re-indents the panel immediately. |

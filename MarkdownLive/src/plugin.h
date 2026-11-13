@@ -20,7 +20,6 @@ struct Settings {
     bool syncScroll = true;
     bool smartEnter = true;
     bool autoOpen = false;
-    bool autoClose = false;      // hide the preview for files that are not Markdown
     bool highlightCode = true;   // color fenced code blocks in the editor
     PanelPosition panel = PanelPosition::Hidden;
 
@@ -67,7 +66,6 @@ enum MenuIndex {
     MenuSyncScroll,
     MenuSmartEnter,
     MenuAutoOpen,
-    MenuAutoClose,
     MenuHighlightCode,
     MenuSep6,
     MenuPanelTop,

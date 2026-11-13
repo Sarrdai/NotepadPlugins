@@ -22,6 +22,7 @@ constexpr wchar_t kVersion[] = L"1.0.0";
 
 enum Command : int {
     kCmdTogglePanel,
+    kCmdPin,
     kCmdAutoActivate,
     kCmdSyncCaret,
     kCmdSeparator1,
@@ -47,6 +48,8 @@ std::wstring g_iniPath;
 std::unique_ptr<jpp::PrettyPanel> g_panel;
 std::unordered_map<UINT_PTR, BufferState> g_buffers;
 bool g_ready = false;
+bool g_pinned = false;          // the pretty view keeps its document when other tabs are activated
+UINT_PTR g_pinnedBuffer = 0;
 
 LRESULT npp(UINT msg, WPARAM wParam = 0, LPARAM lParam = 0) {
     return ::SendMessageW(g_npp._nppHandle, msg, wParam, lParam);
@@ -99,29 +102,48 @@ bool documentLooksCompact(HWND view) {
 void updateMenuChecks() {
     const bool panelShown = g_panel && g_panel->isVisible() && g_panel->isAttached();
     npp(NPPM_SETMENUITEMCHECK, g_funcs[kCmdTogglePanel]._cmdID, panelShown);
+    npp(NPPM_SETMENUITEMCHECK, g_funcs[kCmdPin]._cmdID, g_pinned);
     npp(NPPM_SETMENUITEMCHECK, g_funcs[kCmdAutoActivate]._cmdID, g_settings.autoActivate);
     npp(NPPM_SETMENUITEMCHECK, g_funcs[kCmdSyncCaret]._cmdID, g_settings.syncCaret);
 }
 
-void onPanelClosedByUser() {
-    // Remember the decision for the active buffer so switching tabs does not reopen it.
-    const auto bufferId = static_cast<UINT_PTR>(npp(NPPM_GETCURRENTBUFFERID));
-    g_buffers[bufferId].mode = Mode::Off;
+void setPinned(bool pinned) {
+    g_pinned = pinned;
+    g_pinnedBuffer = pinned && g_panel ? g_panel->buffer() : 0;
+    if (g_panel) g_panel->setPinned(pinned);
     updateMenuChecks();
+}
+
+void evaluateActiveBuffer();
+
+// Pins the pretty view to its document (opening it for the active one first) or releases the pin.
+void togglePin();
+
+void onPanelClosedByUser() {
+    // Remember the decision for the shown buffer so switching tabs does not reopen it.
+    const auto bufferId = g_pinned ? g_pinnedBuffer : static_cast<UINT_PTR>(npp(NPPM_GETCURRENTBUFFERID));
+    g_buffers[bufferId].mode = Mode::Off;
+    setPinned(false);
 }
 
 jpp::PrettyPanel* ensurePanel() {
     if (!g_panel) {
         auto panel = std::make_unique<jpp::PrettyPanel>(g_module, g_npp, g_settings);
         if (!panel->create(kCmdTogglePanel, &onPanelClosedByUser)) return nullptr;
+        panel->setPinHandler(&togglePin);
         g_panel = std::move(panel);
     }
     return g_panel.get();
 }
 
-// Decides whether the pretty view is shown for the active buffer.
+// Decides whether the pretty view is shown for the active buffer: it closes for other documents
+// and reopens for documents that have it switched on. A pinned view keeps its document.
 void evaluateActiveBuffer() {
     if (!g_ready) return;
+    if (g_pinned && g_panel && g_panel->isAttached()) {
+        updateMenuChecks();
+        return;
+    }
     const auto bufferId = static_cast<UINT_PTR>(npp(NPPM_GETCURRENTBUFFERID));
     HWND view = currentView();
     BufferState& state = g_buffers[bufferId];
@@ -165,11 +187,33 @@ void cmdTogglePanel() {
     // Notepad++ also invokes this command while restoring docked panels at startup;
     // visibility is driven by the active buffer instead.
     if (!g_ready) return;
+    if (g_pinned) {  // hides the pinned view
+        g_buffers[g_pinnedBuffer].mode = Mode::Off;
+        setPinned(false);
+        evaluateActiveBuffer();
+        return;
+    }
     const auto bufferId = static_cast<UINT_PTR>(npp(NPPM_GETCURRENTBUFFERID));
     const bool shownForBuffer = g_panel && g_panel->isVisible() && g_panel->buffer() == bufferId;
     g_buffers[bufferId].mode = shownForBuffer ? Mode::Off : Mode::On;
     evaluateActiveBuffer();
 }
+
+void togglePin() {
+    if (!g_ready) return;
+    if (g_pinned) {
+        setPinned(false);
+        evaluateActiveBuffer();  // the active document decides again
+        return;
+    }
+    if (!g_panel || !g_panel->isVisible() || !g_panel->isAttached()) {
+        g_buffers[static_cast<UINT_PTR>(npp(NPPM_GETCURRENTBUFFERID))].mode = Mode::On;
+        evaluateActiveBuffer();
+    }
+    if (g_panel && g_panel->isVisible() && g_panel->isAttached()) setPinned(true);
+}
+
+void cmdPin() { togglePin(); }
 
 void cmdAutoActivate() {
     g_settings.autoActivate = !g_settings.autoActivate;
@@ -225,6 +269,7 @@ BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/) {
 extern "C" __declspec(dllexport) void setInfo(NppData data) {
     g_npp = data;
     setCommand(kCmdTogglePanel, L"Show pretty view for current file", cmdTogglePanel);
+    setCommand(kCmdPin, L"Pin pretty view to current file", cmdPin);
     setCommand(kCmdAutoActivate, L"Open automatically for compact JSON", cmdAutoActivate);
     setCommand(kCmdSyncCaret, L"Synchronise caret", cmdSyncCaret);
     setCommand(kCmdSeparator1, L"-", nullptr);
@@ -274,10 +319,14 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification* n) {
             evaluateActiveBuffer();  // "Save as" may have changed the extension
             break;
         case NPPN_FILEBEFORECLOSE:
-            if (g_panel && g_panel->buffer() == bufferId) g_panel->detach();
+            if (g_panel && g_panel->buffer() == bufferId) {
+                if (g_pinned) setPinned(false);
+                g_panel->detach();
+            }
             break;
         case NPPN_FILECLOSED:
             g_buffers.erase(bufferId);
+            evaluateActiveBuffer();  // a closed pinned document may have been in the background
             break;
         case NPPN_WORDSTYLESUPDATED:
         case NPPN_DARKMODECHANGED:
