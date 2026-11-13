@@ -10,11 +10,14 @@ const char* const kTocEnd = "<!-- /TOC -->";
 
 namespace {
 
-bool isSpace(char c) { return c == ' ' || c == '\t'; }
-bool isDigit(char c) { return c >= '0' && c <= '9'; }
+bool isSpace(char c) {
+    return c == ' ' || c == '\t';
+}
+bool isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
 bool isAlnum(char c) {
-    return isDigit(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-           (static_cast<unsigned char>(c) >= 0x80);
+    return isDigit(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (static_cast<unsigned char>(c) >= 0x80);
 }
 
 bool isBlank(const std::string& s) {
@@ -43,13 +46,26 @@ char32_t decodeUtf8(const std::string& s, size_t& i) {
     const auto b0 = static_cast<unsigned char>(s[i]);
     int extra = 0;
     char32_t cp = b0;
-    if (b0 >= 0xF0 && b0 <= 0xF7) { extra = 3; cp = b0 & 0x07; }
-    else if (b0 >= 0xE0 && b0 <= 0xEF) { extra = 2; cp = b0 & 0x0F; }
-    else if (b0 >= 0xC0 && b0 <= 0xDF) { extra = 1; cp = b0 & 0x1F; }
-    if (extra > 0 && i + extra >= s.size()) { ++i; return b0; }
+    if (b0 >= 0xF0 && b0 <= 0xF7) {
+        extra = 3;
+        cp = b0 & 0x07;
+    } else if (b0 >= 0xE0 && b0 <= 0xEF) {
+        extra = 2;
+        cp = b0 & 0x0F;
+    } else if (b0 >= 0xC0 && b0 <= 0xDF) {
+        extra = 1;
+        cp = b0 & 0x1F;
+    }
+    if (extra > 0 && i + extra >= s.size()) {
+        ++i;
+        return b0;
+    }
     for (int k = 1; k <= extra; ++k) {
         const auto b = static_cast<unsigned char>(s[i + k]);
-        if ((b & 0xC0) != 0x80) { ++i; return b0; }
+        if ((b & 0xC0) != 0x80) {
+            ++i;
+            return b0;
+        }
         cp = (cp << 6) | (b & 0x3F);
     }
     i += static_cast<size_t>(extra) + 1;
@@ -57,7 +73,8 @@ char32_t decodeUtf8(const std::string& s, size_t& i) {
 }
 
 void appendUtf8(std::string& out, char32_t cp) {
-    if (cp < 0x80) out += static_cast<char>(cp);
+    if (cp < 0x80)
+        out += static_cast<char>(cp);
     else if (cp < 0x800) {
         out += static_cast<char>(0xC0 | (cp >> 6));
         out += static_cast<char>(0x80 | (cp & 0x3F));
@@ -212,8 +229,8 @@ size_t displayWidth(const std::string& utf8) {
 // inline markers
 // =================================================================================================
 
-WrapResult toggleWrap(const std::string& selection, const std::string& before,
-                      const std::string& after, const std::string& marker) {
+WrapResult toggleWrap(const std::string& selection, const std::string& before, const std::string& after,
+                      const std::string& marker) {
     WrapResult r;
     const size_t m = marker.size();
     const char ch = marker[0];
@@ -255,7 +272,10 @@ WrapResult toggleWrap(const std::string& selection, const std::string& before,
     size_t a = 0, b = selection.size();
     while (a < b && (isSpace(selection[a]) || selection[a] == '\n' || selection[a] == '\r')) ++a;
     while (b > a && (isSpace(selection[b - 1]) || selection[b - 1] == '\n' || selection[b - 1] == '\r')) --b;
-    if (a == b) { a = 0; b = selection.size(); }
+    if (a == b) {
+        a = 0;
+        b = selection.size();
+    }
     r.text = selection.substr(0, a) + marker + selection.substr(a, b - a) + marker + selection.substr(b);
     r.selStart = a + m;
     r.selEnd = b + m;
@@ -277,9 +297,9 @@ std::vector<std::string> toggleLinePrefix(const std::vector<std::string>& lines,
         if (isBlank(lines[i])) continue;
         any = true;
         const auto& p = parts[i];
-        const bool has = kind == LinePrefix::Quote ? !p.quote.empty()
+        const bool has = kind == LinePrefix::Quote     ? !p.quote.empty()
                          : kind == LinePrefix::Ordered ? p.ordered
-                         : (!p.marker.empty() && !p.ordered);
+                                                       : (!p.marker.empty() && !p.ordered);
         if (!has) all = false;
     }
     const bool remove = any && all;
@@ -294,7 +314,10 @@ std::vector<std::string> toggleLinePrefix(const std::vector<std::string>& lines,
 
         if (kind == LinePrefix::Quote) {
             if (remove) {
-                if (p.quote.empty()) { out.push_back(lines[i]); continue; }
+                if (p.quote.empty()) {
+                    out.push_back(lines[i]);
+                    continue;
+                }
                 size_t cut = 1;
                 if (p.quote.size() > 1 && p.quote[1] == ' ') cut = 2;
                 out.push_back(p.indent + p.quote.substr(cut) + list + p.rest);
@@ -306,7 +329,10 @@ std::vector<std::string> toggleLinePrefix(const std::vector<std::string>& lines,
             continue;
         }
 
-        if (isBlank(lines[i]) && any) { out.push_back(lines[i]); continue; }
+        if (isBlank(lines[i]) && any) {
+            out.push_back(lines[i]);
+            continue;
+        }
 
         if (remove) {
             out.push_back(p.indent + p.quote + p.rest);
@@ -319,7 +345,9 @@ std::vector<std::string> toggleLinePrefix(const std::vector<std::string>& lines,
     return out;
 }
 
-bool isTaskLine(const std::string& line) { return !parseLine(line).task.empty(); }
+bool isTaskLine(const std::string& line) {
+    return !parseLine(line).task.empty();
+}
 
 std::string toggleTask(const std::string& line) {
     const LineParts p = parseLine(line);
@@ -332,7 +360,10 @@ std::vector<std::string> changeHeading(const std::vector<std::string>& lines, in
     std::vector<std::string> out;
     out.reserve(lines.size());
     for (const auto& line : lines) {
-        if (isBlank(line)) { out.push_back(line); continue; }
+        if (isBlank(line)) {
+            out.push_back(line);
+            continue;
+        }
         size_t i = 0;
         while (i < line.size() && i < 3 && line[i] == ' ') ++i;
         size_t h = i;
@@ -346,9 +377,14 @@ std::vector<std::string> changeHeading(const std::vector<std::string>& lines, in
             text = trim(line);
         }
         const int next = std::max(0, std::min(6, level + delta));
-        if (next == level) { out.push_back(line); continue; }
-        if (next == 0) out.push_back(text);
-        else out.push_back(std::string(static_cast<size_t>(next), '#') + (text.empty() ? " " : " " + text));
+        if (next == level) {
+            out.push_back(line);
+            continue;
+        }
+        if (next == 0)
+            out.push_back(text);
+        else
+            out.push_back(std::string(static_cast<size_t>(next), '#') + (text.empty() ? " " : " " + text));
     }
     return out;
 }
@@ -422,9 +458,12 @@ bool isDelimiterCell(const std::string& cell) {
     if (cell.empty()) return false;
     size_t dashes = 0;
     for (size_t i = 0; i < cell.size(); ++i) {
-        if (cell[i] == '-') ++dashes;
-        else if (cell[i] == ':' && (i == 0 || i == cell.size() - 1)) continue;
-        else return false;
+        if (cell[i] == '-')
+            ++dashes;
+        else if (cell[i] == ':' && (i == 0 || i == cell.size() - 1))
+            continue;
+        else
+            return false;
     }
     return dashes >= 1;
 }
@@ -522,9 +561,12 @@ std::vector<size_t> pipePositions(const std::string& line) {
     std::vector<size_t> pipes;
     bool inCode = false;
     for (size_t i = 0; i < line.size(); ++i) {
-        if (line[i] == '\\') ++i;
-        else if (line[i] == '`') inCode = !inCode;
-        else if (line[i] == '|' && !inCode) pipes.push_back(i);
+        if (line[i] == '\\')
+            ++i;
+        else if (line[i] == '`')
+            inCode = !inCode;
+        else if (line[i] == '|' && !inCode)
+            pipes.push_back(i);
     }
     return pipes;
 }
@@ -615,13 +657,15 @@ TableEdit editTable(const std::vector<std::string>& lines, size_t row, size_t co
             }
             rows.erase(rows.begin() + static_cast<std::ptrdiff_t>(row));
             newRow = std::min(row, rows.size() - 1);
-            if (delimiterRow < rows.size() && newRow <= delimiterRow) newRow = delimiterRow + 1 < rows.size() ? delimiterRow + 1 : 0;
+            if (delimiterRow < rows.size() && newRow <= delimiterRow)
+                newRow = delimiterRow + 1 < rows.size() ? delimiterRow + 1 : 0;
             break;
         case TableOp::ColumnLeft:
         case TableOp::ColumnRight: {
             newColumn = op == TableOp::ColumnLeft ? column : column + 1;
             for (size_t r = 0; r < rows.size(); ++r) {
-                rows[r].insert(rows[r].begin() + static_cast<std::ptrdiff_t>(newColumn), r == delimiterRow ? "---" : "");
+                rows[r].insert(rows[r].begin() + static_cast<std::ptrdiff_t>(newColumn),
+                               r == delimiterRow ? "---" : "");
             }
             break;
         }
@@ -744,7 +788,10 @@ std::string headingPlainText(const std::string& s) {
         } else if (c == '!' && i + 1 < n && s[i + 1] == '[') {
             // image: drop completely
             const size_t close = s.find(']', i + 2);
-            if (close == std::string::npos) { out += c; continue; }
+            if (close == std::string::npos) {
+                out += c;
+                continue;
+            }
             i = close;
             if (i + 1 < n && s[i + 1] == '(') {
                 const size_t paren = s.find(')', i + 2);
@@ -753,16 +800,22 @@ std::string headingPlainText(const std::string& s) {
         } else if (c == '[') {
             // link: keep the text only
             const size_t close = s.find(']', i + 1);
-            const bool isLink = close != std::string::npos && close + 1 < n && (s[close + 1] == '(' || s[close + 1] == '[');
-            if (!isLink) { out += c; continue; }
+            const bool isLink =
+                close != std::string::npos && close + 1 < n && (s[close + 1] == '(' || s[close + 1] == '[');
+            if (!isLink) {
+                out += c;
+                continue;
+            }
             out += headingPlainText(s.substr(i + 1, close - i - 1));
             i = close;
             const size_t end = s.find(s[i + 1] == '(' ? ')' : ']', i + 2);
             if (end != std::string::npos) i = end;
         } else if (c == '<') {
             const size_t close = s.find('>', i + 1);
-            if (close == std::string::npos) out += c;
-            else i = close;
+            if (close == std::string::npos)
+                out += c;
+            else
+                i = close;
         } else if (c == '`' || c == '*') {
             continue;
         } else if ((c == '~' || c == '=') && i + 1 < n && s[i + 1] == c) {
@@ -787,7 +840,10 @@ std::vector<std::string> buildToc(const std::vector<std::string>& lines) {
     if (!lines.empty() && trim(lines[0]) == "---") {  // front matter
         for (size_t i = 1; i < lines.size(); ++i) {
             const std::string t = trim(lines[i]);
-            if (t == "---" || t == "...") { start = i + 1; break; }
+            if (t == "---" || t == "...") {
+                start = i + 1;
+                break;
+            }
         }
     }
 
@@ -796,14 +852,24 @@ std::vector<std::string> buildToc(const std::vector<std::string>& lines) {
         char fc = 0;
         size_t fl = 0;
         if (isFence(line, fc, fl)) {
-            if (!inFence) { inFence = true; fenceChar = fc; fenceLen = fl; }
-            else if (fc == fenceChar && fl >= fenceLen) inFence = false;
+            if (!inFence) {
+                inFence = true;
+                fenceChar = fc;
+                fenceLen = fl;
+            } else if (fc == fenceChar && fl >= fenceLen)
+                inFence = false;
             continue;
         }
         if (inFence) continue;
         const std::string t = trim(line);
-        if (t == kTocBegin) { inToc = true; continue; }
-        if (t == kTocEnd) { inToc = false; continue; }
+        if (t == kTocBegin) {
+            inToc = true;
+            continue;
+        }
+        if (t == kTocEnd) {
+            inToc = false;
+            continue;
+        }
         if (inToc) continue;
 
         Heading h{};
@@ -815,8 +881,13 @@ std::vector<std::string> buildToc(const std::vector<std::string>& lines) {
         if (i + 1 < lines.size() && !t.empty() && (i == start || isBlank(lines[i - 1]))) {
             const LineParts p = parseLine(line);
             if (p.marker.empty() && p.quote.empty() && p.indent.size() < 4 && t.find('|') == std::string::npos) {
-                if (isSetextUnderline(lines[i + 1], '=')) { headings.push_back({1, t}); ++i; }
-                else if (isSetextUnderline(lines[i + 1], '-') && trim(lines[i + 1]).size() >= 2) { headings.push_back({2, t}); ++i; }
+                if (isSetextUnderline(lines[i + 1], '=')) {
+                    headings.push_back({1, t});
+                    ++i;
+                } else if (isSetextUnderline(lines[i + 1], '-') && trim(lines[i + 1]).size() >= 2) {
+                    headings.push_back({2, t});
+                    ++i;
+                }
             }
         }
     }
@@ -846,7 +917,8 @@ std::vector<std::string> buildToc(const std::vector<std::string>& lines) {
             if (c == '[' || c == ']') text += '\\';
             text += c;
         }
-        out.push_back(std::string(static_cast<size_t>(headings[i].level - minLevel) * 2, ' ') + "- [" + text + "](#" + slugs[i] + ")");
+        out.push_back(std::string(static_cast<size_t>(headings[i].level - minLevel) * 2, ' ') + "- [" + text + "](#" +
+                      slugs[i] + ")");
     }
     return out;
 }

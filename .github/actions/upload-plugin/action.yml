@@ -1,7 +1,8 @@
 name: Upload plugin
 description: >
   Verifies the Notepad++ exports of the plugin DLL, stages the files into a folder <name>/
-  (copied as-is into Notepad++\plugins) and uploads it as artifact <name>-<arch>.
+  (copied as-is into Notepad++\plugins) together with the plugin README and the repository LICENSE,
+  and uploads it as artifact <name>-<arch>.
 inputs:
   name:
     description: Plugin folder name (must match the DLL name)
@@ -12,6 +13,9 @@ inputs:
   files:
     description: Newline separated files/directories (wildcards allowed) to put into the plugin folder
     required: true
+  readme:
+    description: README of the plugin, packaged as README.md
+    required: true
 runs:
   using: composite
   steps:
@@ -20,12 +24,15 @@ runs:
       env:
         NAME: ${{ inputs.name }}
         FILES: ${{ inputs.files }}
+        README: ${{ inputs.readme }}
       run: |
         $dest = Join-Path $env:RUNNER_TEMP "plugin/$env:NAME"
         New-Item -ItemType Directory -Force $dest | Out-Null
         $env:FILES -split "`n" | ForEach-Object Trim | Where-Object { $_ } | ForEach-Object {
           Copy-Item -Recurse -Path $_ -Destination $dest -ErrorAction Stop
         }
+        Copy-Item -Path $env:README -Destination (Join-Path $dest "README.md") -ErrorAction Stop
+        Copy-Item -Path LICENSE -Destination $dest -ErrorAction Stop
         Get-ChildItem -Recurse -File $dest | ForEach-Object { $_.FullName.Substring($dest.Length + 1) }
 
     - name: Verify native exports

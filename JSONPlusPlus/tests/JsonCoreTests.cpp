@@ -221,8 +221,8 @@ void testDiffContentRandomized() {
         const int failuresBefore = g_failures;
         CHECK_EQ(jpp::compact(applyEdit(doc, e)), jpp::compact(view));
         if (g_failures != failuresBefore) {
-            std::printf("  doc:  [%s]\n  view: [%s]\n  edit: %zu-%zu [%s]\n", doc.c_str(), view.c_str(), e.start,
-                        e.end, e.replacement.c_str());
+            std::printf("  doc:  [%s]\n  view: [%s]\n  edit: %zu-%zu [%s]\n", doc.c_str(), view.c_str(), e.start, e.end,
+                        e.replacement.c_str());
         }
         if (g_failures > 20) return;
     }

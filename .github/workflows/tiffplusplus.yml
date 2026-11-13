@@ -30,3 +30,4 @@ jobs:
         with:
           name: TiffPlusPlus
           files: TiffPlusPlus/src/TiffPlusPlus/bin/x64/Release/TiffPlusPlus.dll
+          readme: TiffPlusPlus/README.md

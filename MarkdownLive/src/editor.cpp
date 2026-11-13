@@ -3,7 +3,9 @@
 #include "npp_api.h"
 #include "plugin.h"
 
-Editor Editor::current() { return Editor(currentHandle()); }
+Editor Editor::current() {
+    return Editor(currentHandle());
+}
 
 HWND Editor::currentHandle() {
     int which = 0;
@@ -22,21 +24,42 @@ UINT Editor::codePage() const {
 
 std::string Editor::eol() const {
     switch (call(SCI_GETEOLMODE)) {
-        case SC_EOL_CR: return "\r";
-        case SC_EOL_LF: return "\n";
-        default: return "\r\n";
+        case SC_EOL_CR:
+            return "\r";
+        case SC_EOL_LF:
+            return "\n";
+        default:
+            return "\r\n";
     }
 }
 
-bool Editor::readOnly() const { return call(SCI_GETREADONLY) != 0; }
-intptr_t Editor::length() const { return call(SCI_GETLENGTH); }
-intptr_t Editor::lineCount() const { return call(SCI_GETLINECOUNT); }
-intptr_t Editor::caret() const { return call(SCI_GETCURRENTPOS); }
-intptr_t Editor::selectionStart() const { return call(SCI_GETSELECTIONSTART); }
-intptr_t Editor::selectionEnd() const { return call(SCI_GETSELECTIONEND); }
-intptr_t Editor::lineFromPosition(intptr_t pos) const { return call(SCI_LINEFROMPOSITION, static_cast<uintptr_t>(pos)); }
-intptr_t Editor::lineStart(intptr_t line) const { return call(SCI_POSITIONFROMLINE, static_cast<uintptr_t>(line)); }
-intptr_t Editor::lineEnd(intptr_t line) const { return call(SCI_GETLINEENDPOSITION, static_cast<uintptr_t>(line)); }
+bool Editor::readOnly() const {
+    return call(SCI_GETREADONLY) != 0;
+}
+intptr_t Editor::length() const {
+    return call(SCI_GETLENGTH);
+}
+intptr_t Editor::lineCount() const {
+    return call(SCI_GETLINECOUNT);
+}
+intptr_t Editor::caret() const {
+    return call(SCI_GETCURRENTPOS);
+}
+intptr_t Editor::selectionStart() const {
+    return call(SCI_GETSELECTIONSTART);
+}
+intptr_t Editor::selectionEnd() const {
+    return call(SCI_GETSELECTIONEND);
+}
+intptr_t Editor::lineFromPosition(intptr_t pos) const {
+    return call(SCI_LINEFROMPOSITION, static_cast<uintptr_t>(pos));
+}
+intptr_t Editor::lineStart(intptr_t line) const {
+    return call(SCI_POSITIONFROMLINE, static_cast<uintptr_t>(line));
+}
+intptr_t Editor::lineEnd(intptr_t line) const {
+    return call(SCI_GETLINEENDPOSITION, static_cast<uintptr_t>(line));
+}
 
 std::string Editor::text() const {
     const intptr_t len = length();
@@ -56,7 +79,9 @@ std::string Editor::range(intptr_t start, intptr_t end) const {
     return buffer;
 }
 
-std::string Editor::line(intptr_t line) const { return range(lineStart(line), lineEnd(line)); }
+std::string Editor::line(intptr_t line) const {
+    return range(lineStart(line), lineEnd(line));
+}
 
 void Editor::replaceRange(intptr_t start, intptr_t end, const std::string& text) const {
     call(SCI_SETTARGETRANGE, static_cast<uintptr_t>(start), end);
@@ -76,5 +101,9 @@ intptr_t Editor::firstVisibleDocLine(bool* atEnd) const {
     return call(SCI_DOCLINEFROMVISIBLE, static_cast<uintptr_t>(firstVisible));
 }
 
-UndoGroup::UndoGroup(const Editor& editor) : editor_(editor) { editor_.call(SCI_BEGINUNDOACTION); }
-UndoGroup::~UndoGroup() { editor_.call(SCI_ENDUNDOACTION); }
+UndoGroup::UndoGroup(const Editor& editor) : editor_(editor) {
+    editor_.call(SCI_BEGINUNDOACTION);
+}
+UndoGroup::~UndoGroup() {
+    editor_.call(SCI_ENDUNDOACTION);
+}

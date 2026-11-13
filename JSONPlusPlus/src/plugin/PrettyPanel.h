@@ -117,9 +117,9 @@ private:
     sptr_t _doc = 0;
     HWND _view = nullptr;
 
-    bool _syncing = false;        // set while we modify one side programmatically
-    bool _panelDirty = false;     // panel has edits not yet written to the document
-    bool _pushDeferred = false;   // panel contains an unterminated string/comment
+    bool _syncing = false;       // set while we modify one side programmatically
+    bool _panelDirty = false;    // panel has edits not yet written to the document
+    bool _pushDeferred = false;  // panel contains an unterminated string/comment
     int _lineNumberDigits = 0;
 };
 

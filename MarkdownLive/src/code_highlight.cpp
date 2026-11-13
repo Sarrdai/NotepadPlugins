@@ -9,7 +9,7 @@
 
 namespace {
 
-constexpr int kFallbackIndicator = 13;           // used if Notepad++ cannot allocate one (< 8.5.6)
+constexpr int kFallbackIndicator = 13;  // used if Notepad++ cannot allocate one (< 8.5.6)
 constexpr intptr_t kMaxDocumentBytes = 8 * 1024 * 1024;
 
 using DirectFunction = intptr_t (*)(intptr_t, unsigned int, uintptr_t, intptr_t);
@@ -104,7 +104,9 @@ void CodeHighlighter::setEnabled(bool enabled) {
     update();
 }
 
-void CodeHighlighter::onBufferActivated() { update(); }
+void CodeHighlighter::onBufferActivated() {
+    update();
+}
 
 void CodeHighlighter::onTextChanged() {
     if (!ready_ || !enabled_) return;
@@ -129,7 +131,9 @@ void CodeHighlighter::onStylesChanged() {
     update();
 }
 
-void CodeHighlighter::onBufferClosed(intptr_t bufferId) { highlighted_.erase(bufferId); }
+void CodeHighlighter::onBufferClosed(intptr_t bufferId) {
+    highlighted_.erase(bufferId);
+}
 
 void CodeHighlighter::shutdown() {
     if (timer_) KillTimer(nullptr, timer_);
@@ -172,8 +176,10 @@ CodeHighlighter::LanguageInfo* CodeHighlighter::language(const std::string& name
         return nullptr;
     }
     const auto base = styles.find(0);
-    if (base != styles.end() && base->second.hasForeground) info.defaultColor = toScintillaColor(base->second.foreground);
-    else if (theme_.defaultStyle.hasForeground) info.defaultColor = toScintillaColor(theme_.defaultStyle.foreground);
+    if (base != styles.end() && base->second.hasForeground)
+        info.defaultColor = toScintillaColor(base->second.foreground);
+    else if (theme_.defaultStyle.hasForeground)
+        info.defaultColor = toScintillaColor(theme_.defaultStyle.foreground);
     for (const auto& style : styles) {
         if (style.second.hasForeground) info.colors[style.first] = toScintillaColor(style.second.foreground);
     }
@@ -199,7 +205,8 @@ CodeHighlighter::LanguageInfo* CodeHighlighter::language(const std::string& name
     }
     if (info.lexer == "hypertext") {  // scripts embedded in HTML
         const auto js = languages_.find("javascript");
-        if (js != languages_.end() && js->second.keywords.count("instre1")) lists[1] += " " + js->second.keywords.at("instre1");
+        if (js != languages_.end() && js->second.keywords.count("instre1"))
+            lists[1] += " " + js->second.keywords.at("instre1");
     }
     info.keywords.assign(lists.begin(), lists.end());
     return &info;
@@ -221,7 +228,8 @@ void CodeHighlighter::update() {
     const Editor editor = Editor::current();
     const intptr_t buffer = currentBufferId();
     const std::wstring path = currentFilePath();
-    const bool applies = enabled_ && (isMarkdownPath(path) || extensionOf(path).empty()) && editor.length() <= kMaxDocumentBytes;
+    const bool applies =
+        enabled_ && (isMarkdownPath(path) || extensionOf(path).empty()) && editor.length() <= kMaxDocumentBytes;
     editor.call(SCI_SETINDICATORCURRENT, static_cast<uintptr_t>(indicator_));
     if (!applies) {
         if (highlighted_.erase(buffer)) clearRange(editor, 0, editor.length());
@@ -259,8 +267,8 @@ void CodeHighlighter::update() {
     done = std::move(next);
 }
 
-bool CodeHighlighter::colorize(const Editor& editor, intptr_t start, const std::string& code, const std::string& languageName,
-                               LanguageInfo& info) {
+bool CodeHighlighter::colorize(const Editor& editor, intptr_t start, const std::string& code,
+                               const std::string& languageName, LanguageInfo& info) {
     if (!lexerView_) {
         if (!hostWindow_) hostWindow_ = createHostWindow();
         if (!hostWindow_) return false;
@@ -270,15 +278,16 @@ bool CodeHighlighter::colorize(const Editor& editor, intptr_t start, const std::
         SendMessageW(lexerView_, SCI_SETUNDOCOLLECTION, 0, 0);
     }
     if (lexerLanguage_ != languageName) {
-        void* lexer = reinterpret_cast<void*>(
-            SendMessageW(g_npp.nppHandle, NPPM_CREATELEXER, 0, reinterpret_cast<LPARAM>(toWide(info.lexer, CP_UTF8).c_str())));
+        void* lexer = reinterpret_cast<void*>(SendMessageW(
+            g_npp.nppHandle, NPPM_CREATELEXER, 0, reinterpret_cast<LPARAM>(toWide(info.lexer, CP_UTF8).c_str())));
         if (!lexer) {
             info.supported = false;  // Notepad++ < 8.4 or unknown lexer
             return false;
         }
         SendMessageW(lexerView_, SCI_SETILEXER, 0, reinterpret_cast<LPARAM>(lexer));
         for (const auto& list : info.keywords) {
-            SendMessageW(lexerView_, SCI_SETKEYWORDS, static_cast<WPARAM>(list.first), reinterpret_cast<LPARAM>(list.second.c_str()));
+            SendMessageW(lexerView_, SCI_SETKEYWORDS, static_cast<WPARAM>(list.first),
+                         reinterpret_cast<LPARAM>(list.second.c_str()));
         }
         lexerLanguage_ = languageName;
     }

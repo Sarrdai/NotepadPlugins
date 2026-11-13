@@ -144,9 +144,9 @@ let dirty = { lut: false, draw: false }, rafPending = false;
 let drag = null, spaceDown = false, mouse = null;
 let stack = null, sliderActive = false, playing = false, playTimer = 0;
 
-const settings = loadSettings();
-$("clip").value = settings.clip;
-$("contrast").classList.toggle("hidden", !settings.showContrast);
+// Settings live in TiffPlusPlus.ini; the plugin sends them once the page is ready.
+const settings = { clip: "0.5", showContrast: true };
+applySettings();
 
 // ---------------------------------------------------------------- messages from the plugin
 if (window.chrome && chrome.webview) {
@@ -168,6 +168,11 @@ function onHostMessage(msg) {
     case "window": $("sName").textContent = msg.text; setWindow(msg.lo, msg.hi); break;
     case "status": $("sName").textContent = msg.text; break;
     case "pin": setPinned(msg.pinned, msg.name); break;
+    case "settings":
+      settings.clip = msg.clip || settings.clip;
+      settings.showContrast = msg.showContrast !== false;
+      applySettings();
+      break;
   }
 }
 
@@ -658,14 +663,15 @@ function copyImage() {
     .catch(err => $("sName").textContent = "Copy failed: " + err.message);
 }
 
-// ---------------------------------------------------------------- settings (per user, browser storage)
-function loadSettings() {
-  const defaults = { clip: "0.5", showContrast: true };
-  try { return Object.assign(defaults, JSON.parse(localStorage.getItem("npptiff.settings") || "{}")); }
-  catch { return defaults; }
+// ---------------------------------------------------------------- settings (TiffPlusPlus.ini via the plugin)
+function applySettings() {
+  $("clip").value = settings.clip;
+  $("contrast").classList.toggle("hidden", !settings.showContrast);
+  drawHistogram();
 }
 function saveSettings() {
-  try { localStorage.setItem("npptiff.settings", JSON.stringify(settings)); } catch { /* storage unavailable */ }
+  if (window.chrome && chrome.webview)
+    chrome.webview.postMessage({ type: "settings", clip: settings.clip, showContrast: settings.showContrast });
 }
 </script>
 </body>

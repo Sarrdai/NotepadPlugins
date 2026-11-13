@@ -82,8 +82,8 @@ std::vector<std::size_t> positionsOfSignificantIndices(std::string_view src,
 
 // Minimal single-range text replacement turning `before` into `after`.
 struct TextEdit {
-    std::size_t start = 0;       // byte position in `before`
-    std::size_t end = 0;         // exclusive end in `before`
+    std::size_t start = 0;  // byte position in `before`
+    std::size_t end = 0;    // exclusive end in `before`
     std::string replacement;
     bool empty() const noexcept { return start == end && replacement.empty(); }
 };
@@ -98,8 +98,8 @@ TextEdit diffContent(std::string_view document, std::string_view edited);
 
 struct ValidationResult {
     bool valid = true;
-    bool empty = false;           // document contains no value
-    std::size_t valueCount = 0;   // > 1 for JSON Lines / sequences
+    bool empty = false;          // document contains no value
+    std::size_t valueCount = 0;  // > 1 for JSON Lines / sequences
     std::size_t errorBegin = 0;
     std::size_t errorEnd = 0;
     std::string message;
@@ -110,7 +110,7 @@ struct ValidationResult {
 ValidationResult validate(std::string_view src, bool allowComments);
 
 struct DetectOptions {
-    std::size_t minLength = 64;          // shorter documents are never "compact"
+    std::size_t minLength = 64;  // shorter documents are never "compact"
     std::size_t minAverageLineLength = 300;
 };
 

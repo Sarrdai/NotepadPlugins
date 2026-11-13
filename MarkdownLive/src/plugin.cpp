@@ -30,16 +30,22 @@ ToolbarIconsWithDarkMode g_toolbarIcons;
 
 ShortcutKey g_keyPreview = {true, false, true, 'M'};  // Ctrl+Shift+M
 // Ctrl+B / Ctrl+I / Ctrl+Shift+B are taken by Notepad++ itself, so "emphasis" keys are used.
-ShortcutKey g_keyBold = {true, false, true, 'E'};     // Ctrl+Shift+E
-ShortcutKey g_keyItalic = {true, false, true, 'I'};   // Ctrl+Shift+I
+ShortcutKey g_keyBold = {true, false, true, 'E'};    // Ctrl+Shift+E
+ShortcutKey g_keyItalic = {true, false, true, 'I'};  // Ctrl+Shift+I
 
-PreviewPanel& panel() { return PreviewPanel::instance(); }
+PreviewPanel& panel() {
+    return PreviewPanel::instance();
+}
 
-std::wstring iniPath() { return configDirectory() + L"\\MarkdownLive.ini"; }
+std::wstring iniPath() {
+    return configDirectory() + L"\\MarkdownLive.ini";
+}
 
 // ---- menu commands ------------------------------------------------------------------------
 
-void focusEditor() { SetFocus(Editor::currentHandle()); }
+void focusEditor() {
+    SetFocus(Editor::currentHandle());
+}
 
 void cmdTogglePreview() {
     g_autoOpened = false;
@@ -48,8 +54,12 @@ void cmdTogglePreview() {
     if (g_nppReady) focusEditor();
 }
 
-void cmdExportHtml() { panel().exportHtml(); }
-void cmdExportPdf() { panel().exportPdf(); }
+void cmdExportHtml() {
+    panel().exportHtml();
+}
+void cmdExportPdf() {
+    panel().exportPdf();
+}
 
 void cmdSyncScroll() {
     g_settings.syncScroll = !g_settings.syncScroll;
@@ -108,9 +118,15 @@ void cmdHighlightCode() {
     CodeHighlighter::instance().setEnabled(g_settings.highlightCode);
 }
 
-void cmdPanelTop() { setPanelPosition(PanelPosition::Top); }
-void cmdPanelBottom() { setPanelPosition(PanelPosition::Bottom); }
-void cmdPanelHidden() { setPanelPosition(PanelPosition::Hidden); }
+void cmdPanelTop() {
+    setPanelPosition(PanelPosition::Top);
+}
+void cmdPanelBottom() {
+    setPanelPosition(PanelPosition::Bottom);
+}
+void cmdPanelHidden() {
+    setPanelPosition(PanelPosition::Hidden);
+}
 
 void updatePanelMenu() {
     setMenuCheck(MenuPanelTop, g_settings.panel == PanelPosition::Top);
@@ -127,7 +143,8 @@ void cmdAbout() {
                 L"Settings > Shortcut Mapper > Plugin commands.");
 }
 
-void addItem(MenuIndex index, const wchar_t* name, PFUNCPLUGINCMD fn, ShortcutKey* key = nullptr, bool checked = false) {
+void addItem(MenuIndex index, const wchar_t* name, PFUNCPLUGINCMD fn, ShortcutKey* key = nullptr,
+             bool checked = false) {
     wcsncpy(g_menu[index].itemName, name, kMenuItemSize - 1);
     g_menu[index].pFunc = fn;
     g_menu[index].pShKey = key;
@@ -163,7 +180,7 @@ void initMenu() {
     addItem(MenuToc, L"Insert / Update Table of Contents", commands::tableOfContents);
     addItem(MenuExportHtml, L"Export as HTML...", cmdExportHtml);
     addItem(MenuExportPdf, L"Export as PDF...", cmdExportPdf);
-    addItem(MenuPinPreview, L"Pin Preview to Current Document", cmdPinPreview);
+    addItem(MenuPinPreview, L"Pin Live Preview to Current File", cmdPinPreview);
     addItem(MenuSyncScroll, L"Synchronize Scrolling", cmdSyncScroll, nullptr, g_settings.syncScroll);
     addItem(MenuSmartEnter, L"Continue Lists on Enter", cmdSmartEnter, nullptr, g_settings.smartEnter);
     addItem(MenuAutoOpen, L"Open Preview Automatically for Markdown Files", cmdAutoOpen, nullptr, g_settings.autoOpen);
@@ -192,7 +209,8 @@ void createMessageWindow() {
     wc.hInstance = g_module;
     wc.lpszClassName = kMessageWindowClass;
     RegisterClassExW(&wc);
-    g_messageWindow = CreateWindowExW(0, kMessageWindowClass, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, g_module, nullptr);
+    g_messageWindow =
+        CreateWindowExW(0, kMessageWindowClass, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, g_module, nullptr);
 }
 
 bool smartEnterApplies() {
@@ -221,10 +239,12 @@ HBITMAP createGlyphBitmap(int size, COLORREF color, bool transparent, COLORREF b
     info.bmiHeader.biBitCount = 32;
     info.bmiHeader.biCompression = BI_RGB;
     DWORD* pixels = nullptr;
-    const HBITMAP bitmap = CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&pixels), nullptr, 0);
+    const HBITMAP bitmap =
+        CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&pixels), nullptr, 0);
     if (!bitmap || !pixels) return bitmap;
     const auto argb = [](COLORREF c, DWORD alpha) {
-        return (alpha << 24) | (static_cast<DWORD>(GetRValue(c)) << 16) | (static_cast<DWORD>(GetGValue(c)) << 8) | GetBValue(c);
+        return (alpha << 24) | (static_cast<DWORD>(GetRValue(c)) << 16) | (static_cast<DWORD>(GetGValue(c)) << 8) |
+               GetBValue(c);
     };
     for (int y = 0; y < size; ++y) {
         for (int x = 0; x < size; ++x) {
@@ -269,26 +289,41 @@ void Settings::save() const {
 }
 
 void setMenuCheck(MenuIndex index, bool checked) {
-    SendMessageW(g_npp.nppHandle, NPPM_SETMENUITEMCHECK, static_cast<WPARAM>(g_menu[index].cmdID), checked ? TRUE : FALSE);
+    SendMessageW(g_npp.nppHandle, NPPM_SETMENUITEMCHECK, static_cast<WPARAM>(g_menu[index].cmdID),
+                 checked ? TRUE : FALSE);
     ToolPanel::instance().refresh();  // its toggle buttons mirror the menu
 }
 
-const wchar_t* menuItemName(MenuIndex index) { return g_menu[index].itemName; }
+const wchar_t* menuItemName(MenuIndex index) {
+    return g_menu[index].itemName;
+}
 
-int menuCommandId(MenuIndex index) { return g_menu[index].cmdID; }
+int menuCommandId(MenuIndex index) {
+    return g_menu[index].cmdID;
+}
 
 bool menuItemChecked(MenuIndex index) {
     switch (index) {
-        case MenuTogglePreview: return panel().visible();
-        case MenuSyncScroll: return g_settings.syncScroll;
-        case MenuSmartEnter: return g_settings.smartEnter;
-        case MenuAutoOpen: return g_settings.autoOpen;
-        case MenuHighlightCode: return g_settings.highlightCode;
-        case MenuPinPreview: return panel().pinned();
-        case MenuPanelTop: return g_settings.panel == PanelPosition::Top;
-        case MenuPanelBottom: return g_settings.panel == PanelPosition::Bottom;
-        case MenuPanelHidden: return g_settings.panel == PanelPosition::Hidden;
-        default: return false;
+        case MenuTogglePreview:
+            return panel().visible();
+        case MenuSyncScroll:
+            return g_settings.syncScroll;
+        case MenuSmartEnter:
+            return g_settings.smartEnter;
+        case MenuAutoOpen:
+            return g_settings.autoOpen;
+        case MenuHighlightCode:
+            return g_settings.highlightCode;
+        case MenuPinPreview:
+            return panel().pinned();
+        case MenuPanelTop:
+            return g_settings.panel == PanelPosition::Top;
+        case MenuPanelBottom:
+            return g_settings.panel == PanelPosition::Bottom;
+        case MenuPanelHidden:
+            return g_settings.panel == PanelPosition::Hidden;
+        default:
+            return false;
     }
 }
 
@@ -318,25 +353,34 @@ std::wstring configDirectory() {
     return path;
 }
 
-intptr_t currentBufferId() { return SendMessageW(g_npp.nppHandle, NPPM_GETCURRENTBUFFERID, 0, 0); }
+intptr_t currentBufferId() {
+    return SendMessageW(g_npp.nppHandle, NPPM_GETCURRENTBUFFERID, 0, 0);
+}
 
-std::wstring currentFilePath() { return bufferFilePath(currentBufferId()); }
+std::wstring currentFilePath() {
+    return bufferFilePath(currentBufferId());
+}
 
 std::wstring bufferFilePath(intptr_t bufferId) {
-    const LRESULT length = SendMessageW(g_npp.nppHandle, NPPM_GETFULLPATHFROMBUFFERID, static_cast<WPARAM>(bufferId), 0);
+    const LRESULT length =
+        SendMessageW(g_npp.nppHandle, NPPM_GETFULLPATHFROMBUFFERID, static_cast<WPARAM>(bufferId), 0);
     if (length <= 0) return {};
     std::vector<wchar_t> buffer(static_cast<size_t>(length) + 1, L'\0');
-    SendMessageW(g_npp.nppHandle, NPPM_GETFULLPATHFROMBUFFERID, static_cast<WPARAM>(bufferId), reinterpret_cast<LPARAM>(buffer.data()));
+    SendMessageW(g_npp.nppHandle, NPPM_GETFULLPATHFROMBUFFERID, static_cast<WPARAM>(bufferId),
+                 reinterpret_cast<LPARAM>(buffer.data()));
     return buffer.data();
 }
 
 bool isMarkdownPath(const std::wstring& path) {
-    static const wchar_t* const known[] = {L"md", L"markdown", L"mdown", L"mkd", L"mkdn", L"mdwn", L"mdtxt", L"rmd", L"qmd"};
+    static const wchar_t* const known[] = {L"md",   L"markdown", L"mdown", L"mkd", L"mkdn",
+                                           L"mdwn", L"mdtxt",    L"rmd",   L"qmd"};
     const std::wstring ext = extensionOf(path);
     return std::any_of(std::begin(known), std::end(known), [&](const wchar_t* e) { return ext == e; });
 }
 
-bool isDarkMode() { return SendMessageW(g_npp.nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0; }
+bool isDarkMode() {
+    return SendMessageW(g_npp.nppHandle, NPPM_ISDARKMODEENABLED, 0, 0) != 0;
+}
 
 HICON createPluginIcon(int size, bool forDarkBackground) {
     const HBITMAP color = createGlyphBitmap(size, forDarkBackground ? RGB(224, 224, 224) : RGB(64, 64, 64), true, 0);
@@ -368,7 +412,9 @@ __declspec(dllexport) void setInfo(NppData data) {
     createMessageWindow();
 }
 
-__declspec(dllexport) const wchar_t* getName() { return kPluginName; }
+__declspec(dllexport) const wchar_t* getName() {
+    return kPluginName;
+}
 
 __declspec(dllexport) FuncItem* getFuncsArray(int* count) {
     initMenu();
@@ -459,9 +505,13 @@ __declspec(dllexport) void beNotified(SCNotification* notification) {
     }
 }
 
-__declspec(dllexport) LRESULT messageProc(UINT, WPARAM, LPARAM) { return TRUE; }
+__declspec(dllexport) LRESULT messageProc(UINT, WPARAM, LPARAM) {
+    return TRUE;
+}
 
-__declspec(dllexport) BOOL isUnicode() { return TRUE; }
+__declspec(dllexport) BOOL isUnicode() {
+    return TRUE;
+}
 
 }  // extern "C"
 

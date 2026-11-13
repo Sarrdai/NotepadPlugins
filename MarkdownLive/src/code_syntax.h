@@ -59,8 +59,8 @@ struct Theme {
 Theme parseTheme(const std::string& xml);
 
 struct Language {
-    std::vector<std::string> extensions;           // lower case
-    std::map<std::string, std::string> keywords;   // keyword class -> words
+    std::vector<std::string> extensions;          // lower case
+    std::map<std::string, std::string> keywords;  // keyword class -> words
 };
 
 std::map<std::string, Language> parseLanguages(const std::string& langsXml);

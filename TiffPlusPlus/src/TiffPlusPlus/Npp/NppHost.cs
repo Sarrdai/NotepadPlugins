@@ -53,6 +53,17 @@ namespace TiffPlusPlus.Npp
             }
         }
 
+        /// <summary>Notepad++ plugin config folder (e.g. %AppData%\Notepad++\plugins\config).</summary>
+        public string PluginsConfigDirectory
+        {
+            get
+            {
+                var sb = new StringBuilder(260);
+                Win32.SendMessage(Handle, NppMsg.NPPM_GETPLUGINSCONFIGDIR, new IntPtr(sb.Capacity), sb);
+                return sb.ToString();
+            }
+        }
+
         public bool IsDarkMode => Send(NppMsg.NPPM_ISDARKMODEENABLED, IntPtr.Zero, IntPtr.Zero) != IntPtr.Zero;
 
         /// <summary>Reserves a Scintilla marker number for this plugin (falls back to a fixed one).</summary>

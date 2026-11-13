@@ -21,14 +21,16 @@ constexpr wchar_t kPluginName[] = L"JSON++";
 constexpr wchar_t kVersion[] = L"1.0.0";
 
 enum Command : int {
-    kCmdTogglePanel,
+    // Same layout as the other plugins: panel, pin, commands, options, About.
+    kCmdTogglePanel,  // also the docking dialog id: keep at index 0
     kCmdPin,
-    kCmdAutoActivate,
-    kCmdSyncCaret,
     kCmdSeparator1,
     kCmdFormatNow,
-    kCmdSettings,
     kCmdSeparator2,
+    kCmdAutoActivate,
+    kCmdSyncCaret,
+    kCmdSettings,
+    kCmdSeparator3,
     kCmdAbout,
     kCmdCount
 };
@@ -48,7 +50,7 @@ std::wstring g_iniPath;
 std::unique_ptr<jpp::PrettyPanel> g_panel;
 std::unordered_map<UINT_PTR, BufferState> g_buffers;
 bool g_ready = false;
-bool g_pinned = false;          // the pretty view keeps its document when other tabs are activated
+bool g_pinned = false;  // the pretty view keeps its document when other tabs are activated
 UINT_PTR g_pinnedBuffer = 0;
 
 LRESULT npp(UINT msg, WPARAM wParam = 0, LPARAM lParam = 0) {
@@ -150,8 +152,12 @@ void evaluateActiveBuffer() {
 
     bool show = false;
     switch (state.mode) {
-        case Mode::On: show = true; break;
-        case Mode::Off: show = false; break;
+        case Mode::On:
+            show = true;
+            break;
+        case Mode::Off:
+            show = false;
+            break;
         case Mode::Auto:
             if (g_settings.autoActivate && isJsonBuffer(bufferId)) {
                 if (!state.detectedCompact) state.detectedCompact = documentLooksCompact(view);
@@ -213,7 +219,9 @@ void togglePin() {
     if (g_panel && g_panel->isVisible() && g_panel->isAttached()) setPinned(true);
 }
 
-void cmdPin() { togglePin(); }
+void cmdPin() {
+    togglePin();
+}
 
 void cmdAutoActivate() {
     g_settings.autoActivate = !g_settings.autoActivate;
@@ -240,9 +248,69 @@ void cmdAbout() {
     const std::wstring text = std::wstring(kPluginName) + L" " + kVersion +
                               L"\n\nShows compact JSON documents pretty printed in a synchronised, editable panel.\n"
                               L"The document itself stays compact and is saved compact.\n\n"
-                              L"Settings: " + g_iniPath +
-                              L"\n(changes are applied when the file is saved in Notepad++)";
+                              L"Settings: " +
+                              g_iniPath + L"\n(changes are applied when the file is saved in Notepad++)";
     ::MessageBoxW(g_npp._nppHandle, text.c_str(), kPluginName, MB_OK | MB_ICONINFORMATION);
+}
+
+// ---------------------------------------------------------------------------
+// Toolbar button (icon drawn at runtime, like the other plugins)
+// ---------------------------------------------------------------------------
+
+// 16x16 curly braces "{ }".
+const char* const kIconRows[16] = {
+    "................", "....##....##....", "...##......##...", "...#........#...",
+    "...#........#...", "...#........#...", "...#........#...", ".##..........##.",
+    ".##..........##.", "...#........#...", "...#........#...", "...#........#...",
+    "...#........#...", "...##......##...", "....##....##....", "................",
+};
+
+toolbarIconsWithDarkMode g_toolbarIcons{};
+
+HBITMAP createGlyphBitmap(int size, COLORREF color, bool transparent, COLORREF background) {
+    BITMAPINFO info{};
+    info.bmiHeader.biSize = sizeof(info.bmiHeader);
+    info.bmiHeader.biWidth = size;
+    info.bmiHeader.biHeight = -size;  // top-down
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    info.bmiHeader.biCompression = BI_RGB;
+    DWORD* pixels = nullptr;
+    const HBITMAP bitmap =
+        ::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&pixels), nullptr, 0);
+    if (!bitmap || !pixels) return bitmap;
+    const auto argb = [](COLORREF c, DWORD alpha) {
+        return (alpha << 24) | (static_cast<DWORD>(GetRValue(c)) << 16) | (static_cast<DWORD>(GetGValue(c)) << 8) |
+               GetBValue(c);
+    };
+    for (int y = 0; y < size; ++y) {
+        for (int x = 0; x < size; ++x) {
+            const bool set = kIconRows[y * 16 / size][x * 16 / size] == '#';
+            pixels[y * size + x] = set ? argb(color, 255) : transparent ? 0 : argb(background, 255);
+        }
+    }
+    return bitmap;
+}
+
+HICON createPluginIcon(int size, bool forDarkBackground) {
+    const HBITMAP color = createGlyphBitmap(size, forDarkBackground ? RGB(224, 224, 224) : RGB(64, 64, 64), true, 0);
+    const HBITMAP mask = ::CreateBitmap(size, size, 1, 1, nullptr);
+    ICONINFO iconInfo{};
+    iconInfo.fIcon = TRUE;
+    iconInfo.hbmColor = color;
+    iconInfo.hbmMask = mask;
+    const HICON icon = ::CreateIconIndirect(&iconInfo);
+    ::DeleteObject(color);
+    ::DeleteObject(mask);
+    return icon;
+}
+
+void addToolbarIcon() {
+    g_toolbarIcons.hToolbarBmp = createGlyphBitmap(16, RGB(64, 64, 64), false, RGB(192, 192, 192));
+    g_toolbarIcons.hToolbarIcon = createPluginIcon(32, false);
+    g_toolbarIcons.hToolbarIconDarkMode = createPluginIcon(32, true);
+    npp(NPPM_ADDTOOLBARICON_FORDARKMODE, static_cast<WPARAM>(g_funcs[kCmdTogglePanel]._cmdID),
+        reinterpret_cast<LPARAM>(&g_toolbarIcons));
 }
 
 void setCommand(int index, const wchar_t* name, PFUNCPLUGINCMD fn) {
@@ -268,18 +336,21 @@ BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/) {
 
 extern "C" __declspec(dllexport) void setInfo(NppData data) {
     g_npp = data;
-    setCommand(kCmdTogglePanel, L"Show pretty view for current file", cmdTogglePanel);
-    setCommand(kCmdPin, L"Pin pretty view to current file", cmdPin);
-    setCommand(kCmdAutoActivate, L"Open automatically for compact JSON", cmdAutoActivate);
-    setCommand(kCmdSyncCaret, L"Synchronise caret", cmdSyncCaret);
+    setCommand(kCmdTogglePanel, L"Toggle Pretty View", cmdTogglePanel);
+    setCommand(kCmdPin, L"Pin Pretty View to Current File", cmdPin);
     setCommand(kCmdSeparator1, L"-", nullptr);
-    setCommand(kCmdFormatNow, L"Re-indent pretty view now", cmdFormatNow);
-    setCommand(kCmdSettings, L"Settings...", cmdSettings);
+    setCommand(kCmdFormatNow, L"Re-indent Pretty View Now", cmdFormatNow);
     setCommand(kCmdSeparator2, L"-", nullptr);
+    setCommand(kCmdAutoActivate, L"Open Automatically for Compact JSON", cmdAutoActivate);
+    setCommand(kCmdSyncCaret, L"Synchronize Caret", cmdSyncCaret);
+    setCommand(kCmdSettings, L"Settings...", cmdSettings);
+    setCommand(kCmdSeparator3, L"-", nullptr);
     setCommand(kCmdAbout, L"About", cmdAbout);
 }
 
-extern "C" __declspec(dllexport) const wchar_t* getName() { return kPluginName; }
+extern "C" __declspec(dllexport) const wchar_t* getName() {
+    return kPluginName;
+}
 
 extern "C" __declspec(dllexport) FuncItem* getFuncsArray(int* count) {
     *count = kCmdCount;
@@ -298,6 +369,9 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification* n) {
 
     const auto bufferId = static_cast<UINT_PTR>(n->nmhdr.idFrom);
     switch (code) {
+        case NPPN_TBMODIFICATION:
+            addToolbarIcon();
+            break;
         case NPPN_READY:
             loadSettings();
             g_ready = true;
@@ -348,4 +422,6 @@ extern "C" __declspec(dllexport) LRESULT messageProc(UINT /*msg*/, WPARAM /*wPar
     return TRUE;
 }
 
-extern "C" __declspec(dllexport) BOOL isUnicode() { return TRUE; }
+extern "C" __declspec(dllexport) BOOL isUnicode() {
+    return TRUE;
+}

@@ -167,8 +167,10 @@ bool saveClipboardBitmapAsPng(const std::wstring& path) {
             {
                 Gdiplus::Bitmap image(bitmap, static_cast<HPALETTE>(nullptr));
                 // CLSID of the built-in GDI+ PNG encoder
-                static const CLSID pngEncoder = {0x557CF406, 0x1A04, 0x11D3, {0x9A, 0x73, 0x00, 0x00, 0xF8, 0x1E, 0xF3, 0x2E}};
-                ok = image.GetLastStatus() == Gdiplus::Ok && image.Save(path.c_str(), &pngEncoder, nullptr) == Gdiplus::Ok;
+                static const CLSID pngEncoder = {
+                    0x557CF406, 0x1A04, 0x11D3, {0x9A, 0x73, 0x00, 0x00, 0xF8, 0x1E, 0xF3, 0x2E}};
+                ok = image.GetLastStatus() == Gdiplus::Ok &&
+                     image.Save(path.c_str(), &pngEncoder, nullptr) == Gdiplus::Ok;
             }
             Gdiplus::GdiplusShutdown(token);
         }
@@ -190,10 +192,18 @@ std::wstring clipboardImageFile() {
 
 }  // namespace
 
-void bold() { wrapSelection("**"); }
-void italic() { wrapSelection("*"); }
-void strikethrough() { wrapSelection("~~"); }
-void inlineCode() { wrapSelection("`"); }
+void bold() {
+    wrapSelection("**");
+}
+void italic() {
+    wrapSelection("*");
+}
+void strikethrough() {
+    wrapSelection("~~");
+}
+void inlineCode() {
+    wrapSelection("`");
+}
 
 void codeBlock() {
     const Editor ed = Editor::current();
@@ -204,7 +214,8 @@ void codeBlock() {
         std::string prefix;
         const intptr_t pos = blockInsertPosition(ed, prefix);
         ed.replaceRange(pos, pos, prefix + "```" + eol + eol + "```");
-        const intptr_t caret = pos + static_cast<intptr_t>(prefix.size()) + 3;  // behind the opening fence: type the language
+        const intptr_t caret =
+            pos + static_cast<intptr_t>(prefix.size()) + 3;  // behind the opening fence: type the language
         ed.select(caret, caret);
         return;
     }
@@ -330,7 +341,8 @@ void pasteImage() {
     SYSTEMTIME now;
     GetLocalTime(&now);
     wchar_t stamp[32];
-    wsprintfW(stamp, L"%04d%02d%02d-%02d%02d%02d", now.wYear, now.wMonth, now.wDay, now.wHour, now.wMinute, now.wSecond);
+    wsprintfW(stamp, L"%04d%02d%02d-%02d%02d%02d", now.wYear, now.wMonth, now.wDay, now.wHour, now.wMinute,
+              now.wSecond);
     const std::wstring target = folder + L"\\" + fileStemOf(document) + L"-" + stamp + L".png";
     if (!saveClipboardBitmapAsPng(target)) {
         showMessage(L"The image could not be saved to\n" + target, MB_ICONWARNING);
@@ -378,8 +390,9 @@ void applyTableEdit(md::TableOp op) {
 
     const Lines before = readLines(ed, block.first, block.last);
     const intptr_t caretOffset = ed.caret() - ed.lineStart(block.caretLine);
-    const md::TableEdit edit = md::editTable(before, static_cast<size_t>(block.caretLine - block.first),
-                                             md::tableColumnAt(before[block.caretLine - block.first], static_cast<size_t>(caretOffset)), op);
+    const md::TableEdit edit =
+        md::editTable(before, static_cast<size_t>(block.caretLine - block.first),
+                      md::tableColumnAt(before[block.caretLine - block.first], static_cast<size_t>(caretOffset)), op);
     if (!edit.ok) {
         showMessage(toWide(edit.error));
         return;
@@ -412,12 +425,24 @@ void formatTable() {
     ed.select(caret, caret);
 }
 
-void tableRowAbove() { applyTableEdit(md::TableOp::RowAbove); }
-void tableRowBelow() { applyTableEdit(md::TableOp::RowBelow); }
-void tableDeleteRow() { applyTableEdit(md::TableOp::DeleteRow); }
-void tableColumnLeft() { applyTableEdit(md::TableOp::ColumnLeft); }
-void tableColumnRight() { applyTableEdit(md::TableOp::ColumnRight); }
-void tableDeleteColumn() { applyTableEdit(md::TableOp::DeleteColumn); }
+void tableRowAbove() {
+    applyTableEdit(md::TableOp::RowAbove);
+}
+void tableRowBelow() {
+    applyTableEdit(md::TableOp::RowBelow);
+}
+void tableDeleteRow() {
+    applyTableEdit(md::TableOp::DeleteRow);
+}
+void tableColumnLeft() {
+    applyTableEdit(md::TableOp::ColumnLeft);
+}
+void tableColumnRight() {
+    applyTableEdit(md::TableOp::ColumnRight);
+}
+void tableDeleteColumn() {
+    applyTableEdit(md::TableOp::DeleteColumn);
+}
 
 void tableOfContents() {
     const Editor ed = Editor::current();
@@ -435,8 +460,12 @@ void tableOfContents() {
     };
     intptr_t begin = -1, end = -1;
     for (size_t i = 0; i < lines.size(); ++i) {
-        if (begin < 0 && isMarker(lines[i], md::kTocBegin)) begin = static_cast<intptr_t>(i);
-        else if (begin >= 0 && isMarker(lines[i], md::kTocEnd)) { end = static_cast<intptr_t>(i); break; }
+        if (begin < 0 && isMarker(lines[i], md::kTocBegin))
+            begin = static_cast<intptr_t>(i);
+        else if (begin >= 0 && isMarker(lines[i], md::kTocEnd)) {
+            end = static_cast<intptr_t>(i);
+            break;
+        }
     }
     const std::string eol = ed.eol();
     const std::string body = md::joinLines(toc, eol) + eol;

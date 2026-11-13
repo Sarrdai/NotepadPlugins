@@ -14,10 +14,10 @@ std::wstring jsonString(const std::wstring& text);
 // Decodes %XX escapes (interpreted as UTF-8).
 std::wstring percentDecode(const std::wstring& text);
 
-std::wstring directoryOf(const std::wstring& path);   // without trailing backslash
+std::wstring directoryOf(const std::wstring& path);  // without trailing backslash
 std::wstring fileNameOf(const std::wstring& path);
 std::wstring fileStemOf(const std::wstring& path);
-std::wstring extensionOf(const std::wstring& path);   // lower case, without dot
+std::wstring extensionOf(const std::wstring& path);  // lower case, without dot
 bool isAbsolutePath(const std::wstring& path);
 bool fileExists(const std::wstring& path);
 bool startsWithNoCase(const std::wstring& text, const wchar_t* prefix);

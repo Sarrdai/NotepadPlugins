@@ -142,6 +142,7 @@ namespace TiffPlusPlus.Npp
         public const int NPPM_DMMREGASDCKDLG = NPPMSG + 33;
         public const int NPPM_SWITCHTOFILE = NPPMSG + 37;
         public const int NPPM_SETMENUITEMCHECK = NPPMSG + 40;
+        public const int NPPM_GETPLUGINSCONFIGDIR = NPPMSG + 46;
         public const int NPPM_MENUCOMMAND = NPPMSG + 48;
         public const int NPPM_GETPOSFROMBUFFERID = NPPMSG + 57;
         public const int NPPM_GETFULLPATHFROMBUFFERID = NPPMSG + 58;

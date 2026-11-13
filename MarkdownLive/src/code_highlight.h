@@ -28,8 +28,8 @@ public:
     void setEnabled(bool enabled);
 
     void onBufferActivated();
-    void onTextChanged();      // debounced
-    void onStylesChanged();    // theme / dark mode / Style Configurator
+    void onTextChanged();    // debounced
+    void onStylesChanged();  // theme / dark mode / Style Configurator
     void onBufferClosed(intptr_t bufferId);
     void shutdown();
 
@@ -38,7 +38,7 @@ private:
         bool supported = true;
         std::string lexer;
         std::vector<std::pair<int, std::string>> keywords;  // SCI_SETKEYWORDS index -> words
-        std::map<int, int> colors;                           // style id -> Scintilla color (BGR)
+        std::map<int, int> colors;                          // style id -> Scintilla color (BGR)
         int defaultColor = -1;
     };
 
@@ -60,8 +60,8 @@ private:
     UINT_PTR timer_ = 0;
 
     HWND hostWindow_ = nullptr;
-    HWND lexerView_ = nullptr;      // hidden Scintilla used to run the lexers
-    std::string lexerLanguage_;     // language currently set up in lexerView_
+    HWND lexerView_ = nullptr;   // hidden Scintilla used to run the lexers
+    std::string lexerLanguage_;  // language currently set up in lexerView_
 
     std::map<std::string, syntax::Language> languages_;
     syntax::Theme theme_;

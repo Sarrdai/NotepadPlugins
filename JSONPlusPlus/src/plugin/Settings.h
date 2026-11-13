@@ -12,17 +12,17 @@ namespace jpp {
 struct Settings {
     // Activation
     bool autoActivate = true;
-    int minLength = 64;                // bytes
-    int minAverageLineLength = 300;    // bytes per line
-    int maxFileSizeMB = 32;            // larger documents are never activated automatically
+    int minLength = 64;              // bytes
+    int minAverageLineLength = 300;  // bytes per line
+    int maxFileSizeMB = 32;          // larger documents are never activated automatically
     std::wstring extensions = L"json;jsonc;json5;geojson;topojson;har;webmanifest;jsonld;babelrc;eslintrc";
 
     // Pretty view
     int indentSize = 4;
     bool useTabs = false;
     bool spaceAfterColon = true;
-    bool allowComments = true;         // JSONC: do not report comments as errors
-    bool syncCaret = true;             // keep the caret of both views on the same JSON position
+    bool allowComments = true;  // JSONC: do not report comments as errors
+    bool syncCaret = true;      // keep the caret of both views on the same JSON position
 
     // Synchronisation timing
     int documentToPanelDelayMs = 150;  // debounce for changes made in the editor

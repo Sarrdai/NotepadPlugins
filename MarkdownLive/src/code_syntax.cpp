@@ -8,7 +8,9 @@ namespace syntax {
 
 namespace {
 
-bool isBlank(char c) { return c == ' ' || c == '\t'; }
+bool isBlank(char c) {
+    return c == ' ' || c == '\t';
+}
 
 std::string toLower(std::string s) {
     for (char& c : s) {
@@ -54,11 +56,16 @@ std::string decodeEntities(const std::string& s) {
             continue;
         }
         const std::string name = s.substr(i + 1, semi - i - 1);
-        if (name == "amp") out += '&';
-        else if (name == "lt") out += '<';
-        else if (name == "gt") out += '>';
-        else if (name == "quot") out += '"';
-        else if (name == "apos") out += '\'';
+        if (name == "amp")
+            out += '&';
+        else if (name == "lt")
+            out += '<';
+        else if (name == "gt")
+            out += '>';
+        else if (name == "quot")
+            out += '"';
+        else if (name == "apos")
+            out += '\'';
         else if (name.size() > 1 && name[0] == '#') {
             const bool hex = name[1] == 'x' || name[1] == 'X';
             appendUtf8(out, std::strtoul(name.c_str() + (hex ? 2 : 1), nullptr, hex ? 16 : 10));
@@ -196,46 +203,120 @@ Style parseStyle(const XmlElement& e) {
 
 // Common info strings of code blocks -> Notepad++ language name.
 const std::pair<const char*, const char*> kAliases[] = {
-    {"c", "c"}, {"h", "c"},
-    {"cpp", "cpp"}, {"c++", "cpp"}, {"cxx", "cpp"}, {"cc", "cpp"}, {"hpp", "cpp"}, {"hxx", "cpp"},
-    {"cs", "cs"}, {"csharp", "cs"}, {"c#", "cs"},
+    {"c", "c"},
+    {"h", "c"},
+    {"cpp", "cpp"},
+    {"c++", "cpp"},
+    {"cxx", "cpp"},
+    {"cc", "cpp"},
+    {"hpp", "cpp"},
+    {"hxx", "cpp"},
+    {"cs", "cs"},
+    {"csharp", "cs"},
+    {"c#", "cs"},
     {"java", "java"},
-    {"js", "javascript.js"}, {"javascript", "javascript.js"}, {"jsx", "javascript.js"}, {"mjs", "javascript.js"},
-    {"cjs", "javascript.js"}, {"node", "javascript.js"},
-    {"ts", "typescript"}, {"tsx", "typescript"},
-    {"json", "json"}, {"jsonc", "json"}, {"json5", "json"},
-    {"py", "python"}, {"python3", "python"}, {"py3", "python"}, {"gyp", "python"},
-    {"sh", "bash"}, {"shell", "bash"}, {"zsh", "bash"}, {"ksh", "bash"}, {"shellscript", "bash"}, {"console", "bash"},
-    {"ps", "powershell"}, {"ps1", "powershell"}, {"psm1", "powershell"}, {"pwsh", "powershell"}, {"posh", "powershell"},
-    {"bat", "batch"}, {"cmd", "batch"}, {"dos", "batch"}, {"batchfile", "batch"},
-    {"mysql", "sql"}, {"pgsql", "sql"}, {"postgresql", "sql"}, {"plsql", "sql"}, {"sqlite", "sql"},
-    {"tsql", "mssql"}, {"t-sql", "mssql"},
-    {"xaml", "xml"}, {"xsd", "xml"}, {"xsl", "xml"}, {"xslt", "xml"}, {"svg", "xml"}, {"csproj", "xml"},
-    {"plist", "xml"}, {"wsdl", "xml"},
-    {"htm", "html"}, {"xhtml", "html"}, {"vue", "html"},
-    {"scss", "css"}, {"less", "css"},
+    {"js", "javascript.js"},
+    {"javascript", "javascript.js"},
+    {"jsx", "javascript.js"},
+    {"mjs", "javascript.js"},
+    {"cjs", "javascript.js"},
+    {"node", "javascript.js"},
+    {"ts", "typescript"},
+    {"tsx", "typescript"},
+    {"json", "json"},
+    {"jsonc", "json"},
+    {"json5", "json"},
+    {"py", "python"},
+    {"python3", "python"},
+    {"py3", "python"},
+    {"gyp", "python"},
+    {"sh", "bash"},
+    {"shell", "bash"},
+    {"zsh", "bash"},
+    {"ksh", "bash"},
+    {"shellscript", "bash"},
+    {"console", "bash"},
+    {"ps", "powershell"},
+    {"ps1", "powershell"},
+    {"psm1", "powershell"},
+    {"pwsh", "powershell"},
+    {"posh", "powershell"},
+    {"bat", "batch"},
+    {"cmd", "batch"},
+    {"dos", "batch"},
+    {"batchfile", "batch"},
+    {"mysql", "sql"},
+    {"pgsql", "sql"},
+    {"postgresql", "sql"},
+    {"plsql", "sql"},
+    {"sqlite", "sql"},
+    {"tsql", "mssql"},
+    {"t-sql", "mssql"},
+    {"xaml", "xml"},
+    {"xsd", "xml"},
+    {"xsl", "xml"},
+    {"xslt", "xml"},
+    {"svg", "xml"},
+    {"csproj", "xml"},
+    {"plist", "xml"},
+    {"wsdl", "xml"},
+    {"htm", "html"},
+    {"xhtml", "html"},
+    {"vue", "html"},
+    {"scss", "css"},
+    {"less", "css"},
     {"yml", "yaml"},
-    {"cfg", "ini"}, {"conf", "ini"}, {"properties", "props"}, {"editorconfig", "ini"}, {"gitconfig", "ini"},
-    {"pl", "perl"}, {"rb", "ruby"}, {"rs", "rust"}, {"golang", "go"},
-    {"vbnet", "vb"}, {"vb.net", "vb"}, {"visualbasic", "vb"}, {"vbs", "vb"}, {"vbscript", "vb"}, {"vba", "vb"},
-    {"patch", "diff"}, {"make", "makefile"}, {"mk", "makefile"},
+    {"cfg", "ini"},
+    {"conf", "ini"},
+    {"properties", "props"},
+    {"editorconfig", "ini"},
+    {"gitconfig", "ini"},
+    {"pl", "perl"},
+    {"rb", "ruby"},
+    {"rs", "rust"},
+    {"golang", "go"},
+    {"vbnet", "vb"},
+    {"vb.net", "vb"},
+    {"visualbasic", "vb"},
+    {"vbs", "vb"},
+    {"vbscript", "vb"},
+    {"vba", "vb"},
+    {"patch", "diff"},
+    {"make", "makefile"},
+    {"mk", "makefile"},
     {"tex", "latex"},
-    {"f90", "fortran"}, {"f95", "fortran"}, {"f77", "fortran77"},
-    {"delphi", "pascal"}, {"pas", "pascal"},
-    {"hs", "haskell"}, {"erl", "erlang"}, {"objectivec", "objc"}, {"objective-c", "objc"},
-    {"nasm", "asm"}, {"masm", "asm"}, {"x86asm", "asm"},
-    {"el", "lisp"}, {"elisp", "lisp"}, {"clojure", "lisp"}, {"scm", "scheme"},
-    {"coffee", "coffeescript"}, {"reg", "registry"}, {"nsi", "nsis"}, {"iss", "inno"},
-    {"m", "matlab"}, {"octave", "matlab"}, {"jl", "julia"},
+    {"f90", "fortran"},
+    {"f95", "fortran"},
+    {"f77", "fortran77"},
+    {"delphi", "pascal"},
+    {"pas", "pascal"},
+    {"hs", "haskell"},
+    {"erl", "erlang"},
+    {"objectivec", "objc"},
+    {"objective-c", "objc"},
+    {"nasm", "asm"},
+    {"masm", "asm"},
+    {"x86asm", "asm"},
+    {"el", "lisp"},
+    {"elisp", "lisp"},
+    {"clojure", "lisp"},
+    {"scm", "scheme"},
+    {"coffee", "coffeescript"},
+    {"reg", "registry"},
+    {"nsi", "nsis"},
+    {"iss", "inno"},
+    {"m", "matlab"},
+    {"octave", "matlab"},
+    {"jl", "julia"},
 };
 
 // Notepad++ language -> Lexilla lexer (where they differ).
 const std::pair<const char*, const char*> kLexers[] = {
-    {"c", "cpp"}, {"cs", "cpp"}, {"java", "cpp"}, {"javascript.js", "cpp"}, {"typescript", "cpp"},
-    {"go", "cpp"}, {"swift", "cpp"}, {"rc", "cpp"}, {"objc", "cpp"}, {"actionscript", "cpp"},
-    {"html", "hypertext"}, {"asp", "hypertext"}, {"php", "phpscript"},
-    {"ini", "props"}, {"mssql", "mssql"}, {"fortran77", "f77"}, {"scheme", "lisp"},
-    {"shell", "bash"}, {"javascript", "cpp"},
+    {"c", "cpp"},          {"cs", "cpp"},           {"java", "cpp"},       {"javascript.js", "cpp"},
+    {"typescript", "cpp"}, {"go", "cpp"},           {"swift", "cpp"},      {"rc", "cpp"},
+    {"objc", "cpp"},       {"actionscript", "cpp"}, {"html", "hypertext"}, {"asp", "hypertext"},
+    {"php", "phpscript"},  {"ini", "props"},        {"mssql", "mssql"},    {"fortran77", "f77"},
+    {"scheme", "lisp"},    {"shell", "bash"},       {"javascript", "cpp"},
 };
 
 const char* lookup(const std::pair<const char*, const char*>* table, size_t count, const std::string& key) {
@@ -246,7 +327,8 @@ const char* lookup(const std::pair<const char*, const char*>* table, size_t coun
 }
 
 int keywordClassIndex(const std::string& keywordClass) {
-    static const char* const names[] = {"instre1", "instre2", "type1", "type2", "type3", "type4", "type5", "type6", "type7"};
+    static const char* const names[] = {"instre1", "instre2", "type1", "type2", "type3",
+                                        "type4",   "type5",   "type6", "type7"};
     for (int i = 0; i < 9; ++i) {
         if (keywordClass == names[i]) return i;
     }
@@ -281,7 +363,8 @@ std::vector<CodeBlock> findCodeBlocks(const std::string& text) {
         size_t eol = text.find_first_of("\r\n", pos);
         if (eol == std::string::npos) eol = text.size();
         size_t next = eol;
-        if (next < text.size()) next += (text[next] == '\r' && next + 1 < text.size() && text[next + 1] == '\n') ? 2 : 1;
+        if (next < text.size())
+            next += (text[next] == '\r' && next + 1 < text.size() && text[next + 1] == '\n') ? 2 : 1;
 
         // fences may be indented (nested in list items)
         size_t i = pos;
@@ -442,11 +525,16 @@ int keywordSetFor(const std::string& lexer, const std::string& keywordClass, int
     if (lexer == "cpp") {
         // C like languages: the list follows the style it colors
         switch (styleId) {
-            case 5: return 0;   // instruction words
-            case 16: return 1;  // type words
-            case 17: return 2;  // doc comment keywords
-            case 19: return 3;  // global classes
-            default: break;
+            case 5:
+                return 0;  // instruction words
+            case 16:
+                return 1;  // type words
+            case 17:
+                return 2;  // doc comment keywords
+            case 19:
+                return 3;  // global classes
+            default:
+                break;
         }
         if (keywordClass == "instre1") return 0;
         if (keywordClass == "type1") return 1;

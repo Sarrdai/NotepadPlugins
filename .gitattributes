@@ -1,0 +1,5 @@
+# Normalize line endings in the repository; checkouts use the platform default.
+* text=auto
+*.sln -text
+# Vendored headers keep their original line endings.
+JSONPlusPlus/third_party/** -text

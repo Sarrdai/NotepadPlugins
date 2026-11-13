@@ -26,6 +26,7 @@ namespace TiffPlusPlus.Viewer
     internal sealed class ImagePanelHost : IDisposable
     {
         private readonly NppHost _npp;
+        private readonly Settings _settings;
         private readonly Func<ImageContext> _currentContext;
         private readonly Action<string, int> _sliceRequested;
         private readonly int _commandIndex;
@@ -36,9 +37,11 @@ namespace TiffPlusPlus.Viewer
         private ImageContext _pinned;  // shown regardless of the active tab while set
 
         /// <param name="commandIndex">Menu index of the panel command; Notepad++ calls it to restore the panel at startup.</param>
-        public ImagePanelHost(NppHost npp, int commandIndex, Func<ImageContext> currentContext, Action<string, int> sliceRequested)
+        public ImagePanelHost(NppHost npp, Settings settings, int commandIndex, Func<ImageContext> currentContext,
+            Action<string, int> sliceRequested)
         {
             _npp = npp;
+            _settings = settings;
             _commandIndex = commandIndex;
             _currentContext = currentContext;
             _sliceRequested = sliceRequested;
@@ -48,7 +51,7 @@ namespace TiffPlusPlus.Viewer
         {
             if (_form == null)
             {
-                _form = new ImagePanelForm();
+                _form = new ImagePanelForm(_settings);
                 _form.PanelClosed += () => { _autoClosed = false; SetActive(false); };
                 _form.SliceRequested += (key, index) => _sliceRequested(key, index);
                 _form.PinToggled += TogglePin;
@@ -59,6 +62,19 @@ namespace TiffPlusPlus.Viewer
 
             _autoClosed = false;
             SetVisible(!_active);
+        }
+
+        /// <summary>Shows the panel while Notepad++ restores its layout at startup (never hides it).</summary>
+        public void ShowForRestore()
+        {
+            if (!_active) Toggle();
+        }
+
+        /// <summary>Menu command: pins the image of the active tab (opening the panel first) or releases the pin.</summary>
+        public void TogglePinFromMenu()
+        {
+            if (_pinned == null && !_active) Toggle();
+            TogglePin();
         }
 
         /// <summary>
@@ -140,6 +156,7 @@ namespace TiffPlusPlus.Viewer
             string name = context == null ? null
                 : Path.GetFileName(context.IsStack ? Path.GetDirectoryName(context.ImagePath) : context.ImagePath);
             _form?.SetPinned(context != null, name);
+            Plugin.SetPinChecked(context != null);
         }
 
         private void RegisterDockingPanel()
@@ -147,7 +164,7 @@ namespace TiffPlusPlus.Viewer
             var data = new TbData
             {
                 HClient = _form.Handle,
-                PszName = Marshal.StringToHGlobalUni("TIFF Image"),
+                PszName = Marshal.StringToHGlobalUni(Plugin.PluginName),
                 DlgId = _commandIndex,
                 UMask = NppMsg.DWS_DF_CONT_RIGHT,
                 PszModuleName = Marshal.StringToHGlobalUni(Path.GetFileName(typeof(Plugin).Assembly.Location)),
@@ -168,6 +185,7 @@ namespace TiffPlusPlus.Viewer
         private const int AutoStackSamples = 12;
         private static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
 
+        private readonly Settings _settings;
         private readonly PixelCache _cache = new PixelCache(IntPtr.Size == 8 ? 768L << 20 : 192L << 20);
         private readonly HashSet<string> _prefetching = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private WebView2 _webView;
@@ -185,9 +203,10 @@ namespace TiffPlusPlus.Viewer
         public event Action<string, int> SliceRequested;
         public event Action PinToggled;
 
-        public ImagePanelForm()
+        public ImagePanelForm(Settings settings)
         {
-            Text = "TIFF Image";
+            _settings = settings;
+            Text = Plugin.PluginName;
             FormBorderStyle = FormBorderStyle.None;
             BackColor = System.Drawing.Color.FromArgb(30, 30, 30);
         }
@@ -236,9 +255,9 @@ namespace TiffPlusPlus.Viewer
                 string loaderDir = EmbeddedDependencies.ExtractWebView2Loader();
                 CoreWebView2Environment.SetLoaderDllFolderPath(loaderDir);
 
-                // The default user data folder would be next to notepad++.exe (usually not writable).
-                string userData = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TiffPlusPlus", "WebView2");
+                // The default user data folder would be next to notepad++.exe (usually not writable);
+                // like MarkdownLive, it lives in the plugin config folder.
+                string userData = Path.Combine(_settings.ConfigDirectory, "TiffPlusPlus", "WebView2");
                 var env = await CoreWebView2Environment.CreateAsync(null, userData);
 
                 _webView = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = BackColor };
@@ -269,6 +288,7 @@ namespace TiffPlusPlus.Viewer
             {
                 _viewerReady = true;
                 _loadedPath = null;
+                Post(new { type = "settings", clip = _settings.Clip, showContrast = _settings.ShowContrast });
                 PostPinState();
                 LoadRequestedImage();
                 return;
@@ -283,6 +303,13 @@ namespace TiffPlusPlus.Viewer
                     break;
                 case "togglePin":
                     PinToggled?.Invoke();
+                    break;
+                case "settings":
+                    if (message.TryGetValue("clip", out var clip) && clip != null)
+                        _settings.Clip = Convert.ToString(clip, System.Globalization.CultureInfo.InvariantCulture);
+                    if (message.TryGetValue("showContrast", out var show) && show is bool showContrast)
+                        _settings.ShowContrast = showContrast;
+                    _settings.Save();
                     break;
                 case "autoStack" when _context?.IsStack == true:
                     AutoContrastStack(_context, Convert.ToDouble(message["clip"], System.Globalization.CultureInfo.InvariantCulture));

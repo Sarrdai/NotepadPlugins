@@ -96,9 +96,9 @@ using WebResourceRequested =
     Handler<ICoreWebView2WebResourceRequestedEventHandler, ICoreWebView2*, ICoreWebView2WebResourceRequestedEventArgs*>;
 using PrintToPdfCompleted = Handler<ICoreWebView2PrintToPdfCompletedHandler, HRESULT, BOOL>;
 
-typedef HRESULT(STDAPICALLTYPE* CreateEnvironmentFn)(PCWSTR browserExecutableFolder, PCWSTR userDataFolder,
-                                                     ICoreWebView2EnvironmentOptions* options,
-                                                     ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* handler);
+typedef HRESULT(STDAPICALLTYPE* CreateEnvironmentFn)(
+    PCWSTR browserExecutableFolder, PCWSTR userDataFolder, ICoreWebView2EnvironmentOptions* options,
+    ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* handler);
 
 template <typename T>
 void safeRelease(T*& pointer) {
@@ -127,7 +127,8 @@ HWND viewShowing(intptr_t buffer) {
     const auto current = SendMessageW(g_npp.nppHandle, NPPM_GETCURRENTVIEW, 0, 0);
     const int other = current == MAIN_VIEW ? SUB_VIEW : MAIN_VIEW;
     const LRESULT index = SendMessageW(g_npp.nppHandle, NPPM_GETCURRENTDOCINDEX, 0, other);
-    if (index < 0 || SendMessageW(g_npp.nppHandle, NPPM_GETBUFFERIDFROMPOS, static_cast<WPARAM>(index), other) != buffer) {
+    if (index < 0 ||
+        SendMessageW(g_npp.nppHandle, NPPM_GETBUFFERIDFROMPOS, static_cast<WPARAM>(index), other) != buffer) {
         return nullptr;
     }
     return other == MAIN_VIEW ? g_npp.scintillaMainHandle : g_npp.scintillaSecondHandle;
@@ -285,8 +286,10 @@ void PreviewPanel::resizeWebView() {
 // =================================================================================================
 
 void PreviewPanel::toggle() {
-    if (visible_) hide();
-    else show();
+    if (visible_)
+        hide();
+    else
+        show();
 }
 
 void PreviewPanel::show() {
@@ -299,7 +302,7 @@ void PreviewPanel::show() {
         tabIcon_ = createPluginIcon(16, isDarkMode());
 
         g_dockData.hClient = hwnd_;
-        g_dockData.pszName = L"Markdown Preview";
+        g_dockData.pszName = kPluginName;
         g_dockData.dlgID = MenuTogglePreview;
         g_dockData.uMask = DWS_DF_CONT_RIGHT | DWS_ICONTAB | DWS_ADDINFO | DWS_USEOWNDARKMODE;
         g_dockData.hIconTab = tabIcon_;
@@ -357,8 +360,8 @@ void PreviewPanel::setPinned(bool pinned) {
 }
 
 void PreviewPanel::sendPinState() {
-    post(std::wstring(L"{\"type\":\"pin\",\"pinned\":") + (pinned_ ? L"true" : L"false") +
-         L",\"name\":" + jsonString(pinned_ ? fileNameOf(sourcePath()) : std::wstring()) + L"}");
+    post(std::wstring(L"{\"type\":\"pin\",\"pinned\":") + (pinned_ ? L"true" : L"false") + L",\"name\":" +
+         jsonString(pinned_ ? fileNameOf(sourcePath()) : std::wstring()) + L"}");
 }
 
 void PreviewPanel::updateCaption() {
@@ -368,9 +371,13 @@ void PreviewPanel::updateCaption() {
     SendMessageW(g_npp.nppHandle, NPPM_DMMUPDATEDISPINFO, 0, reinterpret_cast<LPARAM>(hwnd_));
 }
 
-std::wstring PreviewPanel::sourcePath() const { return pinned_ ? bufferFilePath(pinnedBuffer_) : currentFilePath(); }
+std::wstring PreviewPanel::sourcePath() const {
+    return pinned_ ? bufferFilePath(pinnedBuffer_) : currentFilePath();
+}
 
-HWND PreviewPanel::sourceView() const { return pinned_ ? viewShowing(pinnedBuffer_) : Editor::currentHandle(); }
+HWND PreviewPanel::sourceView() const {
+    return pinned_ ? viewShowing(pinnedBuffer_) : Editor::currentHandle();
+}
 
 HWND PreviewPanel::activateSource() {
     if (const HWND view = sourceView()) return view;
@@ -410,10 +417,9 @@ void PreviewPanel::initWebView() {
         return;
     }
     const HMODULE loader = LoadLibraryW((pluginDirectory() + L"\\WebView2Loader.dll").c_str());
-    const auto createEnvironment =
-        loader ? reinterpret_cast<CreateEnvironmentFn>(reinterpret_cast<void*>(
-                     GetProcAddress(loader, "CreateCoreWebView2EnvironmentWithOptions")))
-               : nullptr;
+    const auto createEnvironment = loader ? reinterpret_cast<CreateEnvironmentFn>(reinterpret_cast<void*>(
+                                                GetProcAddress(loader, "CreateCoreWebView2EnvironmentWithOptions")))
+                                          : nullptr;
     if (!createEnvironment) {
         setStatus(L"WebView2Loader.dll is missing in\n" + pluginDirectory() +
                   L"\n\nPlease reinstall the plugin (copy the complete MarkdownLive folder).");
@@ -521,7 +527,8 @@ void PreviewPanel::onControllerCreated(ICoreWebView2Controller* controller) {
     newWindowHandler->Release();
 
     // Local images of the document are delivered by serveLocalFile().
-    webView_->AddWebResourceRequestedFilter((std::wstring(kFileUrlPrefix) + L"*").c_str(), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
+    webView_->AddWebResourceRequestedFilter((std::wstring(kFileUrlPrefix) + L"*").c_str(),
+                                            COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
     auto* resourceHandler = new WebResourceRequested(
         kIID_WebResourceRequested, [this](ICoreWebView2*, ICoreWebView2WebResourceRequestedEventArgs* args) -> HRESULT {
             serveLocalFile(args);
@@ -563,7 +570,8 @@ void PreviewPanel::serveLocalFile(ICoreWebView2WebResourceRequestedEventArgs* ar
     const wchar_t* mime = imageMimeType(extensionOf(path));  // only images are ever served
     IStream* stream = nullptr;
     if (mime && isAbsolutePath(path) &&
-        SUCCEEDED(SHCreateStreamOnFileEx(path.c_str(), STGM_READ | STGM_SHARE_DENY_NONE, 0, FALSE, nullptr, &stream)) && stream) {
+        SUCCEEDED(SHCreateStreamOnFileEx(path.c_str(), STGM_READ | STGM_SHARE_DENY_NONE, 0, FALSE, nullptr, &stream)) &&
+        stream) {
         const std::wstring headers = std::wstring(L"Content-Type: ") + mime + L"\r\nCache-Control: no-cache";
         environment_->CreateWebResourceResponse(stream, 200, L"OK", headers.c_str(), &response);
         stream->Release();
@@ -587,8 +595,10 @@ void PreviewPanel::post(const std::wstring& json) {
 void PreviewPanel::sendTheme(bool dark) {
     if (controller_) {
         ICoreWebView2Controller2* controller2 = nullptr;
-        if (SUCCEEDED(controller_->QueryInterface(kIID_Controller2, reinterpret_cast<void**>(&controller2))) && controller2) {
-            const COREWEBVIEW2_COLOR color = dark ? COREWEBVIEW2_COLOR{255, 13, 17, 23} : COREWEBVIEW2_COLOR{255, 255, 255, 255};
+        if (SUCCEEDED(controller_->QueryInterface(kIID_Controller2, reinterpret_cast<void**>(&controller2))) &&
+            controller2) {
+            const COREWEBVIEW2_COLOR color =
+                dark ? COREWEBVIEW2_COLOR{255, 13, 17, 23} : COREWEBVIEW2_COLOR{255, 255, 255, 255};
             controller2->put_DefaultBackgroundColor(color);
             controller2->Release();
         }
@@ -629,7 +639,8 @@ void PreviewPanel::render(bool resetScroll) {
     if (view) {
         const Editor ed(view);
         if (ed.length() > kMaxPreviewBytes) {
-            post(L"{\"type\":\"placeholder\",\"text\":" + jsonString(fileNameOf(path) + L"\n\nThis document is too large for the live preview.") + L"}");
+            post(L"{\"type\":\"placeholder\",\"text\":" +
+                 jsonString(fileNameOf(path) + L"\n\nThis document is too large for the live preview.") + L"}");
             return;
         }
         bool atEnd = false;
@@ -695,7 +706,8 @@ void PreviewPanel::onEditorUpdateUI(HWND view) {
     lastTopLine_ = top;
     lastAtEnd_ = atEnd;
     if (!g_settings.syncScroll || GetTickCount64() < ignoreEditorScrollUntil_) return;
-    post(L"{\"type\":\"scroll\",\"line\":" + std::to_wstring(top) + L",\"atEnd\":" + (atEnd ? L"true" : L"false") + L"}");
+    post(L"{\"type\":\"scroll\",\"line\":" + std::to_wstring(top) + L",\"atEnd\":" + (atEnd ? L"true" : L"false") +
+         L"}");
 }
 
 void PreviewPanel::onThemeChanged() {
@@ -730,8 +742,10 @@ void PreviewPanel::onWebMessage(const std::wstring& message) {
         onSyncSettingChanged();
         sendPinState();
         dirty_ = true;
-        if (!pendingExport_.empty()) startExport();
-        else render(true);
+        if (!pendingExport_.empty())
+            startExport();
+        else
+            render(true);
     } else if (type == L"scroll") {
         const double line = std::wcstod(takeField().c_str(), nullptr);
         onPreviewScrolled(line, takeField() == L"1");
@@ -767,7 +781,8 @@ void PreviewPanel::onPreviewScrolled(double line, bool atEnd) {
     intptr_t docLine = static_cast<intptr_t>(line);
     if (docLine < 0) docLine = 0;
     if (atEnd || docLine > lastLine) docLine = lastLine;  // Scintilla clamps to the last possible scroll position
-    ed.call(SCI_SETFIRSTVISIBLELINE, static_cast<uintptr_t>(ed.call(SCI_VISIBLEFROMDOCLINE, static_cast<uintptr_t>(docLine))));
+    ed.call(SCI_SETFIRSTVISIBLELINE,
+            static_cast<uintptr_t>(ed.call(SCI_VISIBLEFROMDOCLINE, static_cast<uintptr_t>(docLine))));
     // the resulting SCN_UPDATEUI must not be echoed back to the preview
     ignoreEditorScrollUntil_ = GetTickCount64() + 250;
     lastTopLine_ = ed.firstVisibleDocLine(&lastAtEnd_);
@@ -789,8 +804,10 @@ void PreviewPanel::openLink(const std::wstring& href) {
     target = percentDecode(target);
     if (startsWithNoCase(target, L"file:")) {
         target.erase(0, 5);
-        if (target.compare(0, 3, L"///") == 0) target.erase(0, 3);         // file:///C:/dir/file
-        else if (target.compare(0, 2, L"//") != 0 && !target.empty() && target[0] == L'/') target.erase(0, 1);
+        if (target.compare(0, 3, L"///") == 0)
+            target.erase(0, 3);  // file:///C:/dir/file
+        else if (target.compare(0, 2, L"//") != 0 && !target.empty() && target[0] == L'/')
+            target.erase(0, 1);
     }
     for (auto& c : target) {
         if (c == L'/') c = L'\\';
@@ -824,8 +841,12 @@ void PreviewPanel::openLink(const std::wstring& href) {
 // export
 // =================================================================================================
 
-void PreviewPanel::exportHtml() { requestExport(L"html"); }
-void PreviewPanel::exportPdf() { requestExport(L"pdf"); }
+void PreviewPanel::exportHtml() {
+    requestExport(L"html");
+}
+void PreviewPanel::exportPdf() {
+    requestExport(L"pdf");
+}
 
 void PreviewPanel::requestExport(const std::wstring& kind) {
     if (!visible_) show();
@@ -853,12 +874,15 @@ void PreviewPanel::finishExport(const std::wstring& kind, const std::wstring& ht
     const std::wstring stem = fileStemOf(document);
 
     if (kind == L"html") {
-        const std::wstring path = saveFileDialog(stem + L".html", L"HTML document\0*.html;*.htm\0All files\0*.*\0", L"html", initialDir);
-        if (!path.empty() && !writeFileUtf8(path, html)) showMessage(L"The file could not be written:\n" + path, MB_ICONWARNING);
+        const std::wstring path =
+            saveFileDialog(stem + L".html", L"HTML document\0*.html;*.htm\0All files\0*.*\0", L"html", initialDir);
+        if (!path.empty() && !writeFileUtf8(path, html))
+            showMessage(L"The file could not be written:\n" + path, MB_ICONWARNING);
         return;
     }
 
-    const std::wstring path = saveFileDialog(stem + L".pdf", L"PDF document\0*.pdf\0All files\0*.*\0", L"pdf", initialDir);
+    const std::wstring path =
+        saveFileDialog(stem + L".pdf", L"PDF document\0*.pdf\0All files\0*.*\0", L"pdf", initialDir);
     ICoreWebView2_7* webView7 = nullptr;
     if (path.empty() || !webView_ ||
         FAILED(webView_->QueryInterface(kIID_WebView2_7, reinterpret_cast<void**>(&webView7))) || !webView7) {
@@ -870,18 +894,21 @@ void PreviewPanel::finishExport(const std::wstring& kind, const std::wstring& ht
     // print with backgrounds (code blocks, table headers); falls back to the defaults on old runtimes
     ICoreWebView2PrintSettings* printSettings = nullptr;
     ICoreWebView2Environment6* environment6 = nullptr;
-    if (environment_ && SUCCEEDED(environment_->QueryInterface(kIID_Environment6, reinterpret_cast<void**>(&environment6))) && environment6) {
+    if (environment_ &&
+        SUCCEEDED(environment_->QueryInterface(kIID_Environment6, reinterpret_cast<void**>(&environment6))) &&
+        environment6) {
         if (SUCCEEDED(environment6->CreatePrintSettings(&printSettings)) && printSettings) {
             printSettings->put_ShouldPrintBackgrounds(TRUE);
         }
         environment6->Release();
     }
 
-    auto* handler = new PrintToPdfCompleted(kIID_PrintToPdfCompleted, [this, path](HRESULT result, BOOL success) -> HRESULT {
-        sendTheme(isDarkMode());
-        if (FAILED(result) || !success) showMessage(L"The PDF could not be written:\n" + path, MB_ICONWARNING);
-        return S_OK;
-    });
+    auto* handler =
+        new PrintToPdfCompleted(kIID_PrintToPdfCompleted, [this, path](HRESULT result, BOOL success) -> HRESULT {
+            sendTheme(isDarkMode());
+            if (FAILED(result) || !success) showMessage(L"The PDF could not be written:\n" + path, MB_ICONWARNING);
+            return S_OK;
+        });
     if (FAILED(webView7->PrintToPdf(path.c_str(), printSettings, handler))) {
         sendTheme(isDarkMode());
         showMessage(L"The PDF could not be written:\n" + path, MB_ICONWARNING);

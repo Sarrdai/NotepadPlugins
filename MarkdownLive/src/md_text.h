@@ -20,8 +20,8 @@ struct WrapResult {
 
 // Adds or removes `marker` around `selection`. `before` / `after` are a few bytes of
 // context directly adjacent to the selection (used to detect existing markers).
-WrapResult toggleWrap(const std::string& selection, const std::string& before,
-                      const std::string& after, const std::string& marker);
+WrapResult toggleWrap(const std::string& selection, const std::string& before, const std::string& after,
+                      const std::string& marker);
 
 // ---- line based commands ----------------------------------------------------------------
 
@@ -58,9 +58,9 @@ enum class TableOp { RowAbove, RowBelow, DeleteRow, ColumnLeft, ColumnRight, Del
 
 struct TableEdit {
     bool ok = false;
-    std::string error;                // reason if !ok
-    std::vector<std::string> lines;   // the whole table, formatted
-    size_t row = 0;                   // line index of the cell the caret should go to
+    std::string error;               // reason if !ok
+    std::vector<std::string> lines;  // the whole table, formatted
+    size_t row = 0;                  // line index of the cell the caret should go to
     size_t column = 0;
 };
 

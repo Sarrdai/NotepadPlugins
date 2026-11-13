@@ -24,8 +24,7 @@ constexpr bool startsValue(TokenType t) noexcept {
 }
 
 constexpr bool endsValue(TokenType t) noexcept {
-    return t == TokenType::EndObject || t == TokenType::EndArray || t == TokenType::String ||
-           t == TokenType::Scalar;
+    return t == TokenType::EndObject || t == TokenType::EndArray || t == TokenType::String || t == TokenType::Scalar;
 }
 
 constexpr bool isComment(TokenType t) noexcept {
@@ -55,7 +54,7 @@ void scanCompact(std::string_view src, Sink&& sink) {
             } else if (depth == 0 && endsValue(prev.type) && startsValue(tok.type)) {
                 separator = '\n';  // JSON Lines / JSON sequences
             } else if (prev.type == TokenType::Scalar && tok.type == TokenType::Scalar) {
-                separator = ' ';   // keep "1 2" from collapsing into "12"
+                separator = ' ';  // keep "1 2" from collapsing into "12"
             }
             if (separator != 0 && !sink(separator, prev.end - 1, true)) return;
         }
@@ -86,7 +85,9 @@ bool isHex(char c) noexcept {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
-bool isDigit(char c) noexcept { return c >= '0' && c <= '9'; }
+bool isDigit(char c) noexcept {
+    return c >= '0' && c <= '9';
+}
 
 bool isValidNumber(std::string_view s) noexcept {
     std::size_t i = 0;
@@ -178,12 +179,30 @@ bool Lexer::next(Token& tok) noexcept {
     tok.closed = true;
 
     switch (c) {
-        case '{': tok.type = TokenType::BeginObject; ++_pos; break;
-        case '}': tok.type = TokenType::EndObject; ++_pos; break;
-        case '[': tok.type = TokenType::BeginArray; ++_pos; break;
-        case ']': tok.type = TokenType::EndArray; ++_pos; break;
-        case ':': tok.type = TokenType::Colon; ++_pos; break;
-        case ',': tok.type = TokenType::Comma; ++_pos; break;
+        case '{':
+            tok.type = TokenType::BeginObject;
+            ++_pos;
+            break;
+        case '}':
+            tok.type = TokenType::EndObject;
+            ++_pos;
+            break;
+        case '[':
+            tok.type = TokenType::BeginArray;
+            ++_pos;
+            break;
+        case ']':
+            tok.type = TokenType::EndArray;
+            ++_pos;
+            break;
+        case ':':
+            tok.type = TokenType::Colon;
+            ++_pos;
+            break;
+        case ',':
+            tok.type = TokenType::Comma;
+            ++_pos;
+            break;
         case '"':
         case '\'': {
             tok.type = TokenType::String;
@@ -240,8 +259,9 @@ std::string prettyPrint(std::string_view src, const FormatOptions& options) {
     std::string out;
     out.reserve(src.size() + src.size() / 2 + 16);
 
-    const std::string unit = options.useTabs ? std::string("\t")
-                                             : std::string(static_cast<std::size_t>(std::max(0, options.indentSize)), ' ');
+    const std::string unit = options.useTabs
+                                 ? std::string("\t")
+                                 : std::string(static_cast<std::size_t>(std::max(0, options.indentSize)), ' ');
     int level = 0;
     bool pendingNewline = false;
     bool hasPrev = false;
@@ -508,7 +528,8 @@ ValidationResult validate(std::string_view src, bool allowComments) {
         }
 
         if (state == State::AfterValue && stack.empty()) {
-            if (!startsValue(tok.type)) return fail(tok.begin, tok.end, "Unexpected character after the end of the value");
+            if (!startsValue(tok.type))
+                return fail(tok.begin, tok.end, "Unexpected character after the end of the value");
             state = State::Value;  // next value of a JSON sequence
         }
 
@@ -563,12 +584,14 @@ ValidationResult validate(std::string_view src, bool allowComments) {
                     state = State::Colon;
                     break;
                 }
-                if (tok.type == TokenType::EndObject) return fail(tok.begin, tok.end, "Trailing commas are not allowed");
+                if (tok.type == TokenType::EndObject)
+                    return fail(tok.begin, tok.end, "Trailing commas are not allowed");
                 if (tok.type == TokenType::Scalar) {
                     return fail(tok.begin, tok.end, "Property names must be double-quoted strings");
                 }
-                return fail(tok.begin, tok.end, state == State::ObjectFirst ? "Expected a property name or '}'"
-                                                                            : "Expected a property name");
+                return fail(
+                    tok.begin, tok.end,
+                    state == State::ObjectFirst ? "Expected a property name or '}'" : "Expected a property name");
             case State::Colon:
                 if (tok.type != TokenType::Colon) return fail(tok.begin, tok.end, "Expected ':' after property name");
                 state = State::Value;

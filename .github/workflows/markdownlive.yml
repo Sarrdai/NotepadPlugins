@@ -39,3 +39,4 @@ jobs:
         with:
           name: MarkdownLive
           files: MarkdownLive/build/package/MarkdownLive/*
+          readme: MarkdownLive/README.md

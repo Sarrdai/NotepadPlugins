@@ -20,7 +20,7 @@ struct Settings {
     bool syncScroll = true;
     bool smartEnter = true;
     bool autoOpen = false;
-    bool highlightCode = true;   // color fenced code blocks in the editor
+    bool highlightCode = true;  // color fenced code blocks in the editor
     PanelPosition panel = PanelPosition::Hidden;
 
     void load();
@@ -31,7 +31,8 @@ extern Settings g_settings;
 // Index of each entry in the plugin menu (see plugin.cpp). Notepad++ stores custom shortcuts by
 // this index, so new entries go to the end of their group to keep most indices stable.
 enum MenuIndex {
-    MenuTogglePreview = 0,
+    MenuTogglePreview = 0,  // also the docking dialog id: keep at index 0
+    MenuPinPreview,         // same layout as the other plugins: panel, pin, commands, options, About
     MenuSep1,
     MenuBold,
     MenuItalic,
@@ -61,7 +62,6 @@ enum MenuIndex {
     MenuSep4,
     MenuExportHtml,
     MenuExportPdf,
-    MenuPinPreview,
     MenuSep5,
     MenuSyncScroll,
     MenuSmartEnter,
@@ -85,10 +85,10 @@ bool menuItemChecked(MenuIndex index);  // current state of the checkable entrie
 void runMenuCommand(MenuIndex index);
 void setPanelPosition(PanelPosition position);
 
-std::wstring pluginDirectory();   // folder that contains the plugin DLL
-std::wstring configDirectory();   // Notepad++ plugin config folder
+std::wstring pluginDirectory();  // folder that contains the plugin DLL
+std::wstring configDirectory();  // Notepad++ plugin config folder
 intptr_t currentBufferId();
-std::wstring currentFilePath();   // full path or e.g. "new 1" for unsaved documents
+std::wstring currentFilePath();  // full path or e.g. "new 1" for unsaved documents
 std::wstring bufferFilePath(intptr_t bufferId);
 bool isMarkdownPath(const std::wstring& path);
 bool isDarkMode();

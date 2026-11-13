@@ -43,20 +43,43 @@ struct Item {
 };
 
 const Item kItems[] = {
-    {MenuTogglePreview, nullptr}, {MenuPinPreview, nullptr},   {kSeparator, nullptr},
-    {MenuBold, nullptr},          {MenuItalic, nullptr},       {MenuStrikethrough, nullptr},
-    {MenuInlineCode, nullptr},    {MenuCodeBlock, nullptr},    {kSeparator, nullptr},
-    {MenuHeadingMore, nullptr},   {MenuHeadingLess, nullptr},  {MenuBulletList, nullptr},
-    {MenuNumberedList, nullptr},  {MenuTask, nullptr},         {MenuQuote, nullptr},
+    {MenuTogglePreview, nullptr},
+    {MenuPinPreview, nullptr},
     {kSeparator, nullptr},
-    {MenuLink, nullptr},          {MenuImage, nullptr},        {MenuPasteImage, nullptr},
-    {MenuInsertTable, nullptr},   {MenuFormatTable, nullptr},  {kSeparator, nullptr},
-    {MenuTableRowAbove, nullptr}, {MenuTableRowBelow, nullptr}, {MenuTableDeleteRow, nullptr},
-    {MenuTableColumnLeft, nullptr}, {MenuTableColumnRight, nullptr}, {MenuTableDeleteColumn, nullptr},
-    {kSeparator, nullptr},        {MenuToc, nullptr},
+    {MenuBold, nullptr},
+    {MenuItalic, nullptr},
+    {MenuStrikethrough, nullptr},
+    {MenuInlineCode, nullptr},
+    {MenuCodeBlock, nullptr},
     {kSeparator, nullptr},
-    {MenuExportHtml, L"HTML"},    {MenuExportPdf, L"PDF"},     {kSeparator, nullptr},
-    {MenuSyncScroll, nullptr},    {MenuSmartEnter, nullptr},   {MenuAutoOpen, nullptr},
+    {MenuHeadingMore, nullptr},
+    {MenuHeadingLess, nullptr},
+    {MenuBulletList, nullptr},
+    {MenuNumberedList, nullptr},
+    {MenuTask, nullptr},
+    {MenuQuote, nullptr},
+    {kSeparator, nullptr},
+    {MenuLink, nullptr},
+    {MenuImage, nullptr},
+    {MenuPasteImage, nullptr},
+    {MenuInsertTable, nullptr},
+    {MenuFormatTable, nullptr},
+    {kSeparator, nullptr},
+    {MenuTableRowAbove, nullptr},
+    {MenuTableRowBelow, nullptr},
+    {MenuTableDeleteRow, nullptr},
+    {MenuTableColumnLeft, nullptr},
+    {MenuTableColumnRight, nullptr},
+    {MenuTableDeleteColumn, nullptr},
+    {kSeparator, nullptr},
+    {MenuToc, nullptr},
+    {kSeparator, nullptr},
+    {MenuExportHtml, L"HTML"},
+    {MenuExportPdf, L"PDF"},
+    {kSeparator, nullptr},
+    {MenuSyncScroll, nullptr},
+    {MenuSmartEnter, nullptr},
+    {MenuAutoOpen, nullptr},
     {MenuHighlightCode, nullptr},
 };
 constexpr int kItemCount = static_cast<int>(sizeof(kItems) / sizeof(kItems[0]));
@@ -65,7 +88,8 @@ constexpr int kChevronIndex = kItemCount;  // hit test result for the "more" but
 int dpiOf(HWND hwnd) {
     // GetDpiForWindow exists since Windows 10 1607
     using Fn = UINT(WINAPI*)(HWND);
-    static const auto fn = reinterpret_cast<Fn>(reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow")));
+    static const auto fn = reinterpret_cast<Fn>(
+        reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow")));
     int dpi = fn ? static_cast<int>(fn(hwnd)) : 0;
     if (dpi <= 0) {
         const HDC dc = GetDC(hwnd);
@@ -117,11 +141,13 @@ Palette currentPalette() {
         }
         return {c.pureBackground, c.text, c.edge, c.hotBackground, c.hotEdge, c.softerBackground, c.edge};
     }
-    return {GetSysColor(COLOR_BTNFACE), GetSysColor(COLOR_BTNTEXT), RGB(0xC4, 0xC4, 0xC4),
-            RGB(0xE5, 0xF1, 0xFB),      RGB(0x00, 0x78, 0xD7),      RGB(0xCC, 0xE4, 0xF7), RGB(0x66, 0xA7, 0xE8)};
+    return {GetSysColor(COLOR_BTNFACE), GetSysColor(COLOR_BTNTEXT), RGB(0xC4, 0xC4, 0xC4), RGB(0xE5, 0xF1, 0xFB),
+            RGB(0x00, 0x78, 0xD7),      RGB(0xCC, 0xE4, 0xF7),      RGB(0x66, 0xA7, 0xE8)};
 }
 
-Gdiplus::Color toColor(COLORREF c, BYTE alpha = 255) { return Gdiplus::Color(alpha, GetRValue(c), GetGValue(c), GetBValue(c)); }
+Gdiplus::Color toColor(COLORREF c, BYTE alpha = 255) {
+    return Gdiplus::Color(alpha, GetRValue(c), GetGValue(c), GetBValue(c));
+}
 
 // Falls back to the generic sans serif family (and finally to its regular style) if the
 // requested font is not installed.
@@ -137,7 +163,8 @@ std::unique_ptr<Gdiplus::Font> makeFont(const wchar_t* family, float pixels, int
     return std::make_unique<Gdiplus::Font>(generic, pixels, Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
 }
 
-void drawCentered(Gdiplus::Graphics& g, const wchar_t* text, const Gdiplus::Font& font, const Gdiplus::RectF& box, const Gdiplus::Brush& brush) {
+void drawCentered(Gdiplus::Graphics& g, const wchar_t* text, const Gdiplus::Font& font, const Gdiplus::RectF& box,
+                  const Gdiplus::Brush& brush) {
     const Gdiplus::StringFormat* format = Gdiplus::StringFormat::GenericTypographic();
     Gdiplus::RectF bounds;
     g.MeasureString(text, -1, &font, Gdiplus::PointF(0, 0), format, &bounds);
@@ -171,11 +198,19 @@ void drawGlyph(Gdiplus::Graphics& g, int command, const Gdiplus::RectF& box, COL
         for (const PointF& p : grid) points.push_back(at(p.X, p.Y));
         g.DrawLines(&pen, points.data(), static_cast<INT>(points.size()));
     };
-    const auto frame = [&](float x, float y, float w, float h) { g.DrawRectangle(&pen, box.X + x * u, box.Y + y * u, w * u, h * u); };
-    const auto fill = [&](const Gdiplus::Brush& b, float x, float y, float w, float h) { g.FillRectangle(&b, box.X + x * u, box.Y + y * u, w * u, h * u); };
-    const auto dot = [&](float x, float y, float r) { g.FillEllipse(&brush, box.X + (x - r) * u, box.Y + (y - r) * u, 2 * r * u, 2 * r * u); };
-    const auto text = [&](const wchar_t* s, const wchar_t* family, float size, int style, float x, float y, float w, float h) {
-        drawCentered(g, s, *makeFont(family, size * u, style), RectF(box.X + x * u, box.Y + y * u, w * u, h * u), brush);
+    const auto frame = [&](float x, float y, float w, float h) {
+        g.DrawRectangle(&pen, box.X + x * u, box.Y + y * u, w * u, h * u);
+    };
+    const auto fill = [&](const Gdiplus::Brush& b, float x, float y, float w, float h) {
+        g.FillRectangle(&b, box.X + x * u, box.Y + y * u, w * u, h * u);
+    };
+    const auto dot = [&](float x, float y, float r) {
+        g.FillEllipse(&brush, box.X + (x - r) * u, box.Y + (y - r) * u, 2 * r * u, 2 * r * u);
+    };
+    const auto text = [&](const wchar_t* s, const wchar_t* family, float size, int style, float x, float y, float w,
+                          float h) {
+        drawCentered(g, s, *makeFont(family, size * u, style), RectF(box.X + x * u, box.Y + y * u, w * u, h * u),
+                     brush);
     };
     // window with a divider: editor on the left, preview on the right
     const auto splitWindow = [&] {
@@ -290,13 +325,16 @@ void drawGlyph(Gdiplus::Graphics& g, int command, const Gdiplus::RectF& box, COL
         case MenuTableColumnRight:
         case MenuTableDeleteColumn: {
             // 3 x 3 table, the affected row / column is shaded, a "+" / "-" badge sits at the bottom right
-            const bool rowCommand = command == MenuTableRowAbove || command == MenuTableRowBelow || command == MenuTableDeleteRow;
+            const bool rowCommand =
+                command == MenuTableRowAbove || command == MenuTableRowBelow || command == MenuTableDeleteRow;
             const bool remove = command == MenuTableDeleteRow || command == MenuTableDeleteColumn;
             const bool first = command == MenuTableRowAbove || command == MenuTableColumnLeft;
             const bool last = command == MenuTableRowBelow || command == MenuTableColumnRight;
             const float band = first ? 1.5f : last ? 7.5f : 4.5f;
-            if (rowCommand) fill(soft, 1.5f, band, 9, 3);
-            else fill(soft, band, 1.5f, 3, 9);
+            if (rowCommand)
+                fill(soft, 1.5f, band, 9, 3);
+            else
+                fill(soft, band, 1.5f, 3, 9);
             frame(1.5f, 1.5f, 9, 9);
             for (const float d : {4.5f, 7.5f}) {
                 line(1.5f, d, 10.5f, d);
@@ -344,7 +382,7 @@ void drawGlyph(Gdiplus::Graphics& g, int command, const Gdiplus::RectF& box, COL
             g.TranslateTransform(-8 * u, -8 * u);
             const auto local = [&](float x, float y) { return PointF(x * u, y * u); };
             const PointF head[] = {local(5.5f, 1.5f), local(10.5f, 1.5f), local(9.5f, 2.75f), local(9.5f, 6.5f),
-                                   local(11.5f, 9), local(4.5f, 9), local(6.5f, 6.5f), local(6.5f, 2.75f)};
+                                   local(11.5f, 9),   local(4.5f, 9),     local(6.5f, 6.5f),  local(6.5f, 2.75f)};
             g.FillPolygon(&soft, head, 8);
             g.DrawPolygon(&pen, head, 8);
             g.DrawLine(&pen, local(8, 9), local(8, 14.5f));
@@ -367,7 +405,9 @@ void drawGlyph(Gdiplus::Graphics& g, int command, const Gdiplus::RectF& box, COL
 
 std::wstring shortcutText(int commandId) {
     ShortcutKey key;
-    if (!SendMessageW(g_npp.nppHandle, NPPM_GETSHORTCUTBYCMDID, static_cast<WPARAM>(commandId), reinterpret_cast<LPARAM>(&key)) || key.key == 0) {
+    if (!SendMessageW(g_npp.nppHandle, NPPM_GETSHORTCUTBYCMDID, static_cast<WPARAM>(commandId),
+                      reinterpret_cast<LPARAM>(&key)) ||
+        key.key == 0) {
         return {};
     }
     std::wstring text;
@@ -425,11 +465,13 @@ bool ToolPanel::create(PanelPosition position) {
 
     dpi_ = dpiOf(g_npp.nppHandle);
     const int height = MulDiv(kBarHeight, dpi_, 96);
-    hwnd_ = CreateWindowExW(0, kWindowClass, L"", WS_CHILD | WS_CLIPSIBLINGS, 0, 0, 0, height, rebar, nullptr, g_module, nullptr);
+    hwnd_ = CreateWindowExW(0, kWindowClass, L"", WS_CHILD | WS_CLIPSIBLINGS, 0, 0, 0, height, rebar, nullptr, g_module,
+                            nullptr);
     if (!hwnd_) return false;
 
-    tooltip_ = CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, nullptr, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, CW_USEDEFAULT,
-                               CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, hwnd_, nullptr, g_module, nullptr);
+    tooltip_ =
+        CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, nullptr, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, CW_USEDEFAULT,
+                        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, hwnd_, nullptr, g_module, nullptr);
 
     REBARBANDINFOW band = {};
     band.cbSize = REBARBANDINFOW_V6_SIZE;
@@ -504,8 +546,10 @@ void ToolPanel::layout() {
         Gdiplus::Graphics g(hwnd_);
         const auto font = makeFont(L"Segoe UI", static_cast<float>(scale(12)), Gdiplus::FontStyleRegular);
         for (int i = 0; i < kItemCount; ++i) {
-            if (kItems[i].command == kSeparator) widths[i] = scale(kSeparatorWidth);
-            else if (kItems[i].label) widths[i] = static_cast<int>(labelWidth(g, kItems[i].label, *font) + 0.5f) + scale(12);
+            if (kItems[i].command == kSeparator)
+                widths[i] = scale(kSeparatorWidth);
+            else if (kItems[i].label)
+                widths[i] = static_cast<int>(labelWidth(g, kItems[i].label, *font) + 0.5f) + scale(12);
         }
     }
     int total = scale(kPadding) * 2;
@@ -521,8 +565,11 @@ void ToolPanel::layout() {
         rects_[shown] = {x, top, x + widths[shown], top + button};
         x += widths[shown];
     }
-    while (overflow && shown > 0 && kItems[shown - 1].command == kSeparator) rects_[--shown] = {};  // no dangling separator
-    chevron_ = overflow ? RECT{client.right - scale(kChevronWidth) - scale(kPadding), top, client.right - scale(kPadding), top + button} : RECT{};
+    while (overflow && shown > 0 && kItems[shown - 1].command == kSeparator)
+        rects_[--shown] = {};  // no dangling separator
+    chevron_ = overflow ? RECT{client.right - scale(kChevronWidth) - scale(kPadding), top,
+                               client.right - scale(kPadding), top + button}
+                        : RECT{};
 
     if (tooltip_) {
         TOOLINFOW tool = {};
@@ -568,7 +615,8 @@ void ToolPanel::paint() {
                 const bool down = index == pressed_ && index == hot_;
                 if (!hot && !checked) return;
                 const Gdiplus::RectF box(static_cast<float>(r.left) + 0.5f, static_cast<float>(r.top) + 0.5f,
-                                         static_cast<float>(r.right - r.left) - 1, static_cast<float>(r.bottom - r.top) - 1);
+                                         static_cast<float>(r.right - r.left) - 1,
+                                         static_cast<float>(r.bottom - r.top) - 1);
                 const Gdiplus::SolidBrush fill(toColor(down || (checked && !hot) ? colors.checked : colors.hot));
                 const Gdiplus::Pen edge(toColor(hot ? colors.hotEdge : colors.checkedEdge), 1.0f);
                 g.FillRectangle(&fill, box);
@@ -581,18 +629,21 @@ void ToolPanel::paint() {
                 const Item& item = kItems[i];
                 if (item.command == kSeparator) {
                     const float x = std::floor((static_cast<float>(r.left) + static_cast<float>(r.right)) / 2) + 0.5f;
-                    g.DrawLine(&separatorPen, x, static_cast<float>(r.top) + 3 * u, x, static_cast<float>(r.bottom) - 3 * u);
+                    g.DrawLine(&separatorPen, x, static_cast<float>(r.top) + 3 * u, x,
+                               static_cast<float>(r.bottom) - 3 * u);
                     continue;
                 }
                 drawState(r, i, menuItemChecked(static_cast<MenuIndex>(item.command)));
                 if (item.label) {
-                    const Gdiplus::RectF box(static_cast<float>(r.left), static_cast<float>(r.top), static_cast<float>(r.right - r.left),
+                    const Gdiplus::RectF box(static_cast<float>(r.left), static_cast<float>(r.top),
+                                             static_cast<float>(r.right - r.left),
                                              static_cast<float>(r.bottom - r.top));
                     drawCentered(g, item.label, *labelFont, box, textBrush);
                 } else {
                     const float size = static_cast<float>(MulDiv(kGlyphSize, dpi_, 96));
                     const Gdiplus::RectF box(std::floor(static_cast<float>(r.left + r.right) / 2 - size / 2),
-                                             std::floor(static_cast<float>(r.top + r.bottom) / 2 - size / 2), size, size);
+                                             std::floor(static_cast<float>(r.top + r.bottom) / 2 - size / 2), size,
+                                             size);
                     drawGlyph(g, item.command, box, colors.text);
                 }
             }
@@ -602,7 +653,8 @@ void ToolPanel::paint() {
                 const float cx = static_cast<float>(chevron_.left + chevron_.right) / 2;
                 const float cy = static_cast<float>(chevron_.top + chevron_.bottom) / 2;
                 for (const float dx : {-3.5f, 0.5f}) {
-                    const Gdiplus::PointF points[] = {{cx + dx * u, cy - 3 * u}, {cx + (dx + 3) * u, cy}, {cx + dx * u, cy + 3 * u}};
+                    const Gdiplus::PointF points[] = {
+                        {cx + dx * u, cy - 3 * u}, {cx + (dx + 3) * u, cy}, {cx + dx * u, cy + 3 * u}};
                     g.DrawLines(&pen, points, 3);
                 }
             }
@@ -659,13 +711,15 @@ void ToolPanel::showOverflowMenu() {
         if (separatorPending) AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
         separatorPending = false;
         const bool checked = menuItemChecked(static_cast<MenuIndex>(command));
-        AppendMenuW(menu, MF_STRING | (checked ? MF_CHECKED : 0), static_cast<UINT_PTR>(command) + 1, menuItemName(static_cast<MenuIndex>(command)));
+        AppendMenuW(menu, MF_STRING | (checked ? MF_CHECKED : 0), static_cast<UINT_PTR>(command) + 1,
+                    menuItemName(static_cast<MenuIndex>(command)));
         ++count;
     }
     POINT anchor = {chevron_.right, position_ == PanelPosition::Bottom ? chevron_.top : chevron_.bottom};
     ClientToScreen(hwnd_, &anchor);
     const UINT align = TPM_RIGHTALIGN | (position_ == PanelPosition::Bottom ? TPM_BOTTOMALIGN : TPM_TOPALIGN);
-    const int chosen = TrackPopupMenu(menu, align | TPM_RETURNCMD | TPM_NONOTIFY, anchor.x, anchor.y, 0, hwnd_, nullptr);
+    const int chosen =
+        TrackPopupMenu(menu, align | TPM_RETURNCMD | TPM_NONOTIFY, anchor.x, anchor.y, 0, hwnd_, nullptr);
     DestroyMenu(menu);
     if (chosen > 0 && hwnd_) PostMessageW(hwnd_, WM_APP_RUN, static_cast<WPARAM>(chosen - 1), 0);
 }
@@ -677,7 +731,8 @@ void ToolPanel::showContextMenu(POINT screen) {
     AppendMenuW(menu, MF_STRING, kMenuBottom, L"Panel at Bottom");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kMenuHide, L"Hide Panel");
-    CheckMenuRadioItem(menu, kMenuTop, kMenuBottom, position_ == PanelPosition::Top ? kMenuTop : kMenuBottom, MF_BYCOMMAND);
+    CheckMenuRadioItem(menu, kMenuTop, kMenuBottom, position_ == PanelPosition::Top ? kMenuTop : kMenuBottom,
+                       MF_BYCOMMAND);
     const int chosen = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY, screen.x, screen.y, 0, hwnd_, nullptr);
     DestroyMenu(menu);
     // the panel window is recreated: run the command after this message has been handled

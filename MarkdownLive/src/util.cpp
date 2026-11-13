@@ -15,7 +15,8 @@ std::wstring toWide(const std::string& bytes, UINT codePage) {
 
 std::string toBytes(const std::wstring& wide, UINT codePage) {
     if (wide.empty()) return {};
-    const int n = WideCharToMultiByte(codePage, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
+    const int n =
+        WideCharToMultiByte(codePage, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
     if (n <= 0) return {};
     std::string bytes(static_cast<size_t>(n), '\0');
     WideCharToMultiByte(codePage, 0, wide.data(), static_cast<int>(wide.size()), &bytes[0], n, nullptr, nullptr);
@@ -30,11 +31,21 @@ std::wstring jsonString(const std::wstring& text) {
     for (size_t i = 0; i < text.size(); ++i) {
         const wchar_t c = text[i];
         switch (c) {
-            case L'"': out += L"\\\""; break;
-            case L'\\': out += L"\\\\"; break;
-            case L'\n': out += L"\\n"; break;
-            case L'\r': out += L"\\r"; break;
-            case L'\t': out += L"\\t"; break;
+            case L'"':
+                out += L"\\\"";
+                break;
+            case L'\\':
+                out += L"\\\\";
+                break;
+            case L'\n':
+                out += L"\\n";
+                break;
+            case L'\r':
+                out += L"\\r";
+                break;
+            case L'\t':
+                out += L"\\t";
+                break;
             default:
                 if (c < 0x20) {
                     out += L"\\u00";
@@ -137,18 +148,24 @@ std::wstring relativeUrlPath(const std::wstring& baseDir, const std::wstring& ta
     }
     std::wstring out;
     for (wchar_t c : result) {
-        if (c == L'\\') out += L'/';
-        else if (c == L' ') out += L"%20";
-        else if (c == L'(') out += L"%28";
-        else if (c == L')') out += L"%29";
-        else out += c;
+        if (c == L'\\')
+            out += L'/';
+        else if (c == L' ')
+            out += L"%20";
+        else if (c == L'(')
+            out += L"%28";
+        else if (c == L')')
+            out += L"%29";
+        else
+            out += c;
     }
     return out;
 }
 
 bool writeFileUtf8(const std::wstring& path, const std::wstring& content) {
     const std::string bytes = toBytes(content, CP_UTF8);
-    const HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    const HANDLE file =
+        CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file == INVALID_HANDLE_VALUE) return false;
     DWORD written = 0;
     const BOOL ok = WriteFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &written, nullptr);
@@ -157,8 +174,8 @@ bool writeFileUtf8(const std::wstring& path, const std::wstring& content) {
 }
 
 std::string readFileBytes(const std::wstring& path) {
-    const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file == INVALID_HANDLE_VALUE) return {};
     std::string bytes;
     LARGE_INTEGER size = {};

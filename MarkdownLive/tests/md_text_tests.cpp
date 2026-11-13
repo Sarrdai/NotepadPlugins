@@ -9,16 +9,26 @@
 static int g_failed = 0;
 static int g_total = 0;
 
-static std::string show(const std::string& s) { return "\"" + s + "\""; }
+static std::string show(const std::string& s) {
+    return "\"" + s + "\"";
+}
 static std::string show(const std::vector<std::string>& v) {
     std::string out = "[";
     for (size_t i = 0; i < v.size(); ++i) out += (i ? ", " : "") + show(v[i]);
     return out + "]";
 }
-static std::string show(bool b) { return b ? "true" : "false"; }
-static std::string show(size_t n) { return std::to_string(n); }
-static std::string show(int n) { return std::to_string(n); }
-static std::string show(uint32_t n) { return std::to_string(n); }
+static std::string show(bool b) {
+    return b ? "true" : "false";
+}
+static std::string show(size_t n) {
+    return std::to_string(n);
+}
+static std::string show(int n) {
+    return std::to_string(n);
+}
+static std::string show(uint32_t n) {
+    return std::to_string(n);
+}
 
 template <typename T, typename U>
 static void expectEq(const T& actual, const U& expected, const char* expr, int line) {
@@ -26,17 +36,20 @@ static void expectEq(const T& actual, const U& expected, const char* expr, int l
     const T exp(expected);
     if (actual == exp) return;
     ++g_failed;
-    std::printf("FAIL line %d: %s\n  actual:   %s\n  expected: %s\n", line, expr, show(actual).c_str(), show(exp).c_str());
+    std::printf("FAIL line %d: %s\n  actual:   %s\n  expected: %s\n", line, expr, show(actual).c_str(),
+                show(exp).c_str());
 }
 #define EXPECT_EQ(actual, expected) expectEq((actual), (expected), #actual, __LINE__)
 
 using Lines = std::vector<std::string>;
 using namespace md;
 
-static std::string applyWrap(const std::string& before, const std::string& sel, const std::string& after, const std::string& marker) {
+static std::string applyWrap(const std::string& before, const std::string& sel, const std::string& after,
+                             const std::string& marker) {
     const WrapResult r = toggleWrap(sel, before, after, marker);
     return before.substr(0, before.size() - r.eraseBefore) + "<" + r.text.substr(0, r.selStart) + "|" +
-           r.text.substr(r.selStart, r.selEnd - r.selStart) + "|" + r.text.substr(r.selEnd) + ">" + after.substr(r.eraseAfter);
+           r.text.substr(r.selStart, r.selEnd - r.selStart) + "|" + r.text.substr(r.selEnd) + ">" +
+           after.substr(r.eraseAfter);
 }
 
 int main() {
@@ -86,7 +99,8 @@ int main() {
     EXPECT_EQ(isTaskLine("[ ] a"), false);
 
     // ---- headings
-    EXPECT_EQ(changeHeading({"Title", "## Sub", "###### Deep", ""}, 1), (Lines{"# Title", "### Sub", "###### Deep", ""}));
+    EXPECT_EQ(changeHeading({"Title", "## Sub", "###### Deep", ""}, 1),
+              (Lines{"# Title", "### Sub", "###### Deep", ""}));
     EXPECT_EQ(changeHeading({"Title", "# One", "## Two"}, -1), (Lines{"Title", "One", "# Two"}));
     EXPECT_EQ(changeHeading({"#hashtag"}, 1), (Lines{"# #hashtag"}));
     EXPECT_EQ(changeHeading({"#"}, 1), (Lines{"## "}));
@@ -144,7 +158,7 @@ int main() {
         EXPECT_EQ(tableColumnAt("| A | B |", 3), size_t{0});
         EXPECT_EQ(tableColumnAt("| A | B |", 6), size_t{1});
         EXPECT_EQ(tableColumnAt("| A | B |", 9), size_t{1});  // behind the trailing pipe
-        EXPECT_EQ(tableColumnAt("a | b", 4), size_t{1});       // no outer pipes
+        EXPECT_EQ(tableColumnAt("a | b", 4), size_t{1});      // no outer pipes
         EXPECT_EQ(tableColumnAt("| `x|y` | b |", 8), size_t{0});
         EXPECT_EQ(tableColumnAt("| a \\| b | c |", 8), size_t{0});
         EXPECT_EQ(tableCellOffset("| A   | B |", 0), size_t{2});
@@ -152,7 +166,8 @@ int main() {
         EXPECT_EQ(tableCellOffset("|     | B |", 0), size_t{2});  // empty cell
 
         TableEdit e = editTable(t, 2, 0, TableOp::RowBelow);
-        EXPECT_EQ(e.lines, (Lines{"| A   |   B |", "| :-- | --: |", "| 1   |   2 |", "|     |     |", "| 3   |   4 |"}));
+        EXPECT_EQ(e.lines,
+                  (Lines{"| A   |   B |", "| :-- | --: |", "| 1   |   2 |", "|     |     |", "| 3   |   4 |"}));
         EXPECT_EQ(e.row, size_t{3});
         e = editTable(t, 2, 1, TableOp::RowAbove);
         EXPECT_EQ(e.lines[2], "|     |     |");
@@ -173,7 +188,8 @@ int main() {
         EXPECT_EQ(e.row, size_t{0});
 
         e = editTable(t, 2, 0, TableOp::ColumnRight);
-        EXPECT_EQ(e.lines, (Lines{"| A   |     |   B |", "| :-- | --- | --: |", "| 1   |     |   2 |", "| 3   |     |   4 |"}));
+        EXPECT_EQ(e.lines,
+                  (Lines{"| A   |     |   B |", "| :-- | --- | --: |", "| 1   |     |   2 |", "| 3   |     |   4 |"}));
         EXPECT_EQ(e.column, size_t{1});
         e = editTable(t, 2, 0, TableOp::ColumnLeft);
         EXPECT_EQ(e.lines[0], "|     | A   |   B |");
@@ -206,16 +222,20 @@ int main() {
     EXPECT_EQ(headingPlainText("snake_case _emph_ ~~del~~ 1 \\* 2"), "snake_case emph del 1 * 2");
 
     // ---- table of contents
-    EXPECT_EQ(buildToc({"---", "title: x", "---", "# Title", "", "## Intro", "```", "# not a heading", "```", "### Deep `code`",
-                        "## Intro", "<!-- TOC -->", "- [old](#old)", "<!-- /TOC -->", "## Closed ##", "", "Setext", "------"}),
-              (Lines{"- [Intro](#intro)", "  - [Deep code](#deep-code)", "- [Intro](#intro-1)", "- [Closed](#closed)", "- [Setext](#setext)"}));
+    EXPECT_EQ(buildToc({"---", "title: x", "---", "# Title", "", "## Intro", "```", "# not a heading", "```",
+                        "### Deep `code`", "## Intro", "<!-- TOC -->", "- [old](#old)", "<!-- /TOC -->", "## Closed ##",
+                        "", "Setext", "------"}),
+              (Lines{"- [Intro](#intro)", "  - [Deep code](#deep-code)", "- [Intro](#intro-1)", "- [Closed](#closed)",
+                     "- [Setext](#setext)"}));
     EXPECT_EQ(buildToc({"# A", "# B", "## C [x]"}), (Lines{"- [A](#a)", "- [B](#b)", "  - [C \\[x\\]](#c-x)"}));
     EXPECT_EQ(buildToc({"text only"}), (Lines{}));
-    EXPECT_EQ(buildToc({"### Only deep", "#### Deeper"}), (Lines{"- [Only deep](#only-deep)", "  - [Deeper](#deeper)"}));
+    EXPECT_EQ(buildToc({"### Only deep", "#### Deeper"}),
+              (Lines{"- [Only deep](#only-deep)", "  - [Deeper](#deeper)"}));
 
     // ---- code blocks (editor highlighting)
     {
-        const std::string doc = "# T\r\n```Python title=x\r\nprint(1)\r\n```\r\ntext\n  ~~~~ {.c++}\n```\nint x;\n~~~~~\n````\nopen";
+        const std::string doc =
+            "# T\r\n```Python title=x\r\nprint(1)\r\n```\r\ntext\n  ~~~~ {.c++}\n```\nint x;\n~~~~~\n````\nopen";
         const auto blocks = syntax::findCodeBlocks(doc);
         EXPECT_EQ(blocks.size(), size_t{3});
         EXPECT_EQ(blocks[0].language, "python");
@@ -231,7 +251,9 @@ int main() {
     }
     {
         syntax::XmlElement doc;
-        EXPECT_EQ(syntax::parseXml("\xEF\xBB\xBF<?xml version=\"1.0\"?><!-- c --><a x='1 &amp; 2'><b y=\"&#65;\"/>t&lt;</a>", doc), true);
+        EXPECT_EQ(syntax::parseXml(
+                      "\xEF\xBB\xBF<?xml version=\"1.0\"?><!-- c --><a x='1 &amp; 2'><b y=\"&#65;\"/>t&lt;</a>", doc),
+                  true);
         EXPECT_EQ(doc.children.size(), size_t{1});
         EXPECT_EQ(doc.children[0].attributeOr("x"), "1 & 2");
         EXPECT_EQ(doc.children[0].children[0].attributeOr("y"), "A");
@@ -240,7 +262,8 @@ int main() {
         const auto langs = syntax::parseLanguages(
             "<NotepadPlus><Languages><Language name=\"python\" ext=\"py pyw\" commentLine=\"#\">"
             "<Keywords name=\"instre1\">def if</Keywords><Keywords name=\"instre2\">len</Keywords></Language>"
-            "<Language name=\"rust\" ext=\"rs\"/><Language name=\"javascript.js\" ext=\"js\"/><Language name=\"cs\" ext=\"cs\"/>"
+            "<Language name=\"rust\" ext=\"rs\"/><Language name=\"javascript.js\" ext=\"js\"/><Language name=\"cs\" "
+            "ext=\"cs\"/>"
             "</Languages></NotepadPlus>");
         EXPECT_EQ(langs.at("python").keywords.at("instre2"), "len");
         EXPECT_EQ(syntax::resolveLanguage("py", langs), "python");
@@ -256,10 +279,13 @@ int main() {
 
         const auto theme = syntax::parseTheme(
             "<NotepadPlus><LexerStyles><LexerType name=\"cs\" desc=\"C#\">"
-            "<WordsStyle name=\"INSTRUCTION WORD\" styleID=\"5\" fgColor=\"0000FF\" fontStyle=\"1\" keywordClass=\"instre1\" />"
-            "<WordsStyle name=\"TYPE WORD\" styleID=\"16\" fgColor=\"8000FF\" keywordClass=\"type1\">var dynamic</WordsStyle>"
+            "<WordsStyle name=\"INSTRUCTION WORD\" styleID=\"5\" fgColor=\"0000FF\" fontStyle=\"1\" "
+            "keywordClass=\"instre1\" />"
+            "<WordsStyle name=\"TYPE WORD\" styleID=\"16\" fgColor=\"8000FF\" keywordClass=\"type1\">var "
+            "dynamic</WordsStyle>"
             "<WordsStyle name=\"DEFAULT\" styleID=\"0\" fgColor=\"\" />"
-            "</LexerType></LexerStyles><GlobalStyles><WidgetStyle name=\"Default Style\" styleID=\"32\" fgColor=\"112233\" />"
+            "</LexerType></LexerStyles><GlobalStyles><WidgetStyle name=\"Default Style\" styleID=\"32\" "
+            "fgColor=\"112233\" />"
             "</GlobalStyles></NotepadPlus>");
         EXPECT_EQ(theme.styles.at("cs").at(5).foreground, uint32_t{0x0000FF});
         EXPECT_EQ(theme.styles.at("cs").at(5).fontStyle, 1);

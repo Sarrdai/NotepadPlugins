@@ -24,10 +24,8 @@ jobs:
       - uses: ./.github/actions/upload-plugin
         with:
           name: JsonPlusPlus
-          files: |
-            JSONPlusPlus/build/Release/JsonPlusPlus.dll
-            JSONPlusPlus/README.md
-            JSONPlusPlus/LICENSE
+          files: JSONPlusPlus/build/Release/JsonPlusPlus.dll
+          readme: JSONPlusPlus/README.md
 
   sanitizers:
     name: JSON++ core tests (ASan/UBSan)

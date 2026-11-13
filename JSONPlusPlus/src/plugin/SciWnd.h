@@ -25,9 +25,7 @@ public:
     HWND hwnd() const noexcept { return _hwnd; }
     explicit operator bool() const noexcept { return _hwnd != nullptr && _fn != nullptr; }
 
-    sptr_t call(unsigned int msg, uptr_t wParam = 0, sptr_t lParam = 0) const {
-        return _fn(_ptr, msg, wParam, lParam);
-    }
+    sptr_t call(unsigned int msg, uptr_t wParam = 0, sptr_t lParam = 0) const { return _fn(_ptr, msg, wParam, lParam); }
 
     // View on the whole document. Invalidated by the next modification.
     std::string_view text() const {

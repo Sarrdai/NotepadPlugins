@@ -68,11 +68,14 @@ UINT dpiOf(HWND hwnd) {
     return static_cast<UINT>(dpi);
 }
 
-int scale(HWND hwnd, int value) { return ::MulDiv(value, static_cast<int>(dpiOf(hwnd)), 96); }
+int scale(HWND hwnd, int value) {
+    return ::MulDiv(value, static_cast<int>(dpiOf(hwnd)), 96);
+}
 
 std::wstring withThousands(std::size_t value) {
     std::wstring digits = std::to_wstring(value);
-    for (int i = static_cast<int>(digits.size()) - 3; i > 0; i -= 3) digits.insert(static_cast<std::size_t>(i), 1, L'.');
+    for (int i = static_cast<int>(digits.size()) - 3; i > 0; i -= 3)
+        digits.insert(static_cast<std::size_t>(i), 1, L'.');
     return digits;
 }
 
@@ -114,14 +117,14 @@ bool PrettyPanel::create(int dockCommandIndex, std::function<void()> onClosedByU
     if (!::RegisterClassExW(&wc) && ::GetLastError() != ERROR_CLASS_ALREADY_EXISTS) return false;
 
     // Docking clients are created as children of Notepad++; the docking manager re-parents them.
-    _hwnd = ::CreateWindowExW(0, kWindowClass, L"JSON++", WS_CHILD | WS_CLIPCHILDREN, 0, 0, 300, 400,
-                              _npp._nppHandle, nullptr, _module, this);
+    _hwnd = ::CreateWindowExW(0, kWindowClass, L"JSON++", WS_CHILD | WS_CLIPCHILDREN, 0, 0, 300, 400, _npp._nppHandle,
+                              nullptr, _module, this);
     if (!_hwnd) return false;
 
-    auto editor = reinterpret_cast<HWND>(::SendMessageW(_npp._nppHandle, NPPM_CREATESCINTILLAHANDLE, 0,
-                                                        reinterpret_cast<LPARAM>(_hwnd)));
-    auto mirror = reinterpret_cast<HWND>(::SendMessageW(_npp._nppHandle, NPPM_CREATESCINTILLAHANDLE, 0,
-                                                        reinterpret_cast<LPARAM>(_hwnd)));
+    auto editor = reinterpret_cast<HWND>(
+        ::SendMessageW(_npp._nppHandle, NPPM_CREATESCINTILLAHANDLE, 0, reinterpret_cast<LPARAM>(_hwnd)));
+    auto mirror = reinterpret_cast<HWND>(
+        ::SendMessageW(_npp._nppHandle, NPPM_CREATESCINTILLAHANDLE, 0, reinterpret_cast<LPARAM>(_hwnd)));
     if (!editor || !mirror) return false;
     _editor.bind(editor);
     _mirror.bind(mirror);
@@ -130,12 +133,12 @@ bool PrettyPanel::create(int dockCommandIndex, std::function<void()> onClosedByU
     // The mirror only reports document changes; everything else is view state.
     _mirror.call(SCI_SETMODEVENTMASK, SC_MOD_INSERTTEXT | SC_MOD_DELETETEXT);
 
-    _status = ::CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_ENDELLIPSIS |
-                                                       SS_CENTERIMAGE,
-                                0, 0, 100, 20, _hwnd, nullptr, _module, nullptr);
-    _pin = ::CreateWindowExW(0, L"STATIC", L"Pin", WS_CHILD | WS_VISIBLE | SS_CENTER | SS_NOPREFIX | SS_CENTERIMAGE |
-                                                    SS_NOTIFY,
-                             0, 0, 60, 20, _hwnd, nullptr, _module, nullptr);
+    _status = ::CreateWindowExW(0, L"STATIC", L"",
+                                WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_ENDELLIPSIS | SS_CENTERIMAGE, 0, 0,
+                                100, 20, _hwnd, nullptr, _module, nullptr);
+    _pin = ::CreateWindowExW(0, L"STATIC", L"Pin",
+                             WS_CHILD | WS_VISIBLE | SS_CENTER | SS_NOPREFIX | SS_CENTERIMAGE | SS_NOTIFY, 0, 0, 60, 20,
+                             _hwnd, nullptr, _module, nullptr);
     NONCLIENTMETRICSW metrics{};
     metrics.cbSize = sizeof(metrics);
     if (::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0)) {
@@ -241,9 +244,7 @@ void PrettyPanel::onSettingsChanged() {
 void PrettyPanel::applyTheme() {
     if (!_editor) return;
     HWND view = _view ? _view : _npp._scintillaMainHandle;
-    auto viewCall = [view](unsigned int msg, uptr_t w = 0, sptr_t l = 0) {
-        return ::SendMessageW(view, msg, w, l);
-    };
+    auto viewCall = [view](unsigned int msg, uptr_t w = 0, sptr_t l = 0) { return ::SendMessageW(view, msg, w, l); };
 
     char lexerName[64] = {};
     if (viewCall(SCI_GETLEXERLANGUAGE, 0, 0) < static_cast<sptr_t>(sizeof(lexerName))) {
@@ -295,12 +296,18 @@ void PrettyPanel::applyTheme() {
 
     // Element colours (selection, caret, caret line, white space ...).
     static constexpr int kElements[] = {
-        SC_ELEMENT_SELECTION_TEXT,          SC_ELEMENT_SELECTION_BACK,
-        SC_ELEMENT_SELECTION_ADDITIONAL_TEXT, SC_ELEMENT_SELECTION_ADDITIONAL_BACK,
-        SC_ELEMENT_SELECTION_SECONDARY_TEXT, SC_ELEMENT_SELECTION_SECONDARY_BACK,
-        SC_ELEMENT_SELECTION_INACTIVE_TEXT,  SC_ELEMENT_SELECTION_INACTIVE_BACK,
-        SC_ELEMENT_CARET,                    SC_ELEMENT_CARET_LINE_BACK,
-        SC_ELEMENT_WHITE_SPACE,              SC_ELEMENT_FOLD_LINE,
+        SC_ELEMENT_SELECTION_TEXT,
+        SC_ELEMENT_SELECTION_BACK,
+        SC_ELEMENT_SELECTION_ADDITIONAL_TEXT,
+        SC_ELEMENT_SELECTION_ADDITIONAL_BACK,
+        SC_ELEMENT_SELECTION_SECONDARY_TEXT,
+        SC_ELEMENT_SELECTION_SECONDARY_BACK,
+        SC_ELEMENT_SELECTION_INACTIVE_TEXT,
+        SC_ELEMENT_SELECTION_INACTIVE_BACK,
+        SC_ELEMENT_CARET,
+        SC_ELEMENT_CARET_LINE_BACK,
+        SC_ELEMENT_WHITE_SPACE,
+        SC_ELEMENT_FOLD_LINE,
     };
     for (const int element : kElements) {
         if (viewCall(SCI_GETELEMENTISSET, element)) {
@@ -524,8 +531,8 @@ void PrettyPanel::validateNow() {
 
         const auto line = _editor.call(SCI_LINEFROMPOSITION, result.errorBegin);
         const auto column = _editor.call(SCI_GETCOLUMN, result.errorBegin);
-        std::wstring status = L"⚠ Ln " + std::to_wstring(line + 1) + L", Col " + std::to_wstring(column + 1) +
-                              L": " + widen(result.message);
+        std::wstring status = L"⚠ Ln " + std::to_wstring(line + 1) + L", Col " + std::to_wstring(column + 1) + L": " +
+                              widen(result.message);
         if (_pushDeferred) status += L"  •  editor update paused";
         setStatus(status, true);
         return;
@@ -584,7 +591,8 @@ void PrettyPanel::syncCaretFromView() {
     const std::string_view panelText = _editor.text();
     const std::size_t panelCaret = positionAfterSignificantIndex(panelText, significantIndexAt(documentText, caret));
     const std::size_t panelAnchor =
-        anchor == caret ? panelCaret : positionAfterSignificantIndex(panelText, significantIndexAt(documentText, anchor));
+        anchor == caret ? panelCaret
+                        : positionAfterSignificantIndex(panelText, significantIndexAt(documentText, anchor));
 
     SyncGuard guard(_syncing);
     _editor.call(SCI_SETSEL, panelAnchor, static_cast<sptr_t>(panelCaret));
@@ -728,13 +736,27 @@ void PrettyPanel::onMirrorNotify(const SCNotification& n) {
 
 void PrettyPanel::onTimer(UINT_PTR id) {
     switch (id) {
-        case kTimerDocumentToPanel: refreshFromDocument(); break;
-        case kTimerPanelToDocument: pushToDocument(false); break;
-        case kTimerReformat: reformatPanel(false); break;
-        case kTimerValidate: validateNow(); break;
-        case kTimerCaretFromView: syncCaretFromView(); break;
-        case kTimerCaretFromPanel: syncCaretFromPanel(); break;
-        default: ::KillTimer(_hwnd, id); break;
+        case kTimerDocumentToPanel:
+            refreshFromDocument();
+            break;
+        case kTimerPanelToDocument:
+            pushToDocument(false);
+            break;
+        case kTimerReformat:
+            reformatPanel(false);
+            break;
+        case kTimerValidate:
+            validateNow();
+            break;
+        case kTimerCaretFromView:
+            syncCaretFromView();
+            break;
+        case kTimerCaretFromPanel:
+            syncCaretFromPanel();
+            break;
+        default:
+            ::KillTimer(_hwnd, id);
+            break;
     }
 }
 

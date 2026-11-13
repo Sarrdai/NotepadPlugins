@@ -26,8 +26,8 @@ public:
     // Editor events
     void onDocumentChanged(bool resetScroll);  // other buffer activated, file saved / renamed
     void onBufferClosed(intptr_t bufferId);
-    void onTextChanged(HWND view);             // text edited (debounced)
-    void onEditorUpdateUI(HWND view);          // caret moved or view scrolled
+    void onTextChanged(HWND view);     // text edited (debounced)
+    void onEditorUpdateUI(HWND view);  // caret moved or view scrolled
     void onThemeChanged();
     void onSyncSettingChanged();
 
@@ -75,10 +75,10 @@ private:
     bool registered_ = false;
     bool visible_ = false;
     bool webViewRequested_ = false;
-    bool ready_ = false;   // page loaded and listening
-    bool dirty_ = true;    // content must be rendered when the page becomes ready / visible
+    bool ready_ = false;        // page loaded and listening
+    bool dirty_ = true;         // content must be rendered when the page becomes ready / visible
     bool pendingReset_ = true;  // next render re-syncs the scroll position
-    std::wstring status_;  // shown while the WebView is not available
+    std::wstring status_;       // shown while the WebView is not available
     bool pinned_ = false;
     intptr_t pinnedBuffer_ = 0;
     std::wstring pinnedText_;  // last rendered text of the pinned document

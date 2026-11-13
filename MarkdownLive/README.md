@@ -20,8 +20,8 @@ keine Internetverbindung benötigt.
 - Lokale Bilder (relativ zum Dokument), Links öffnen im Browser bzw. `.md`-Dateien in Notepad++
 - Helles/dunkles Design folgt automatisch dem Dark Mode von Notepad++
 - Export als eigenständiges **HTML** oder als **PDF**
-- **Anpinnen**: Die Pin-Schaltfläche oben rechts in der Vorschau (oder *Pin Preview to Current
-  Document*) hält die Vorschau beim aktuellen Dokument, während im Editor andere Dateien bearbeitet
+- **Anpinnen**: Die Pin-Schaltfläche oben rechts in der Vorschau (oder *Pin Live Preview to Current
+  File*) hält die Vorschau beim aktuellen Dokument, während im Editor andere Dateien bearbeitet
   werden – z. B. eine Markdown-Anleitung neben dem Quelltext. Ist das angepinnte Dokument sichtbar
   (auch in der zweiten Ansicht), wird es weiterhin live aktualisiert und synchron gescrollt; ein
   Doppelklick oder Abhaken in der Vorschau holt es nach vorn. Der Titel des Panels zeigt das
@@ -62,7 +62,7 @@ Ein Wechsel des Themes, des Dark Mode oder eine Änderung im Stil-Konfigurator w
 | Table: Insert Column Left / Right, Delete Column | – | Spalte einfügen bzw. löschen; die Tabelle wird dabei neu ausgerichtet, die Schreibmarke springt in die neue Zelle |
 | Insert / Update Table of Contents | – | Inhaltsverzeichnis zwischen `<!-- TOC -->`-Markern |
 | Export as HTML… / PDF… | – | Export der aktuellen Vorschau |
-| Pin Preview to Current Document | – | Vorschau an das aktuelle Dokument anheften bzw. lösen |
+| Pin Live Preview to Current File | – | Vorschau an das aktuelle Dokument anheften bzw. lösen |
 
 Zusätzlich werden Listen, Aufgaben und Zitate bei **Enter** automatisch fortgesetzt
 (nummerierte Listen zählen weiter; Enter auf einem leeren Listenpunkt beendet die Liste).

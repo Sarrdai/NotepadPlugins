@@ -1,0 +1,17 @@
+name: Format
+
+# Checks the C++ sources against the shared .clang-format (third_party is excluded).
+on:
+  push:
+    branches: ['**']
+    paths: ['**/*.cpp', '**/*.h', '.clang-format', '.github/workflows/format.yml']
+  pull_request:
+    paths: ['**/*.cpp', '**/*.h', '.clang-format', '.github/workflows/format.yml']
+  workflow_dispatch:
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: git ls-files '*.cpp' '*.h' ':!:*/third_party/*' | xargs clang-format-18 --dry-run --Werror

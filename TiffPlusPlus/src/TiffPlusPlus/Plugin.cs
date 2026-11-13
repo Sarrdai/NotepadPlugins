@@ -21,6 +21,8 @@ namespace TiffPlusPlus
         private static ImagePanelHost _panelHost;
         private static StackController _stacks;
         private static int _panelCmdIndex;
+        private static int _pinCmdIndex;
+        private static Settings _settings;
         private static int _highlightCmdIndex;
         private static bool _ready;   // NPPN_READY received; commands run before only restore docked panels
 
@@ -35,21 +37,24 @@ namespace TiffPlusPlus
             _invoker = new Control();
             _invoker.CreateControl();
 
-            _stacks = new StackController(_host);
+            _settings = new Settings(_host.PluginsConfigDirectory);
+            _stacks = new StackController(_host) { HighlightChanges = _settings.HighlightChanges };
             _stacks.SliceChanged += () => _panelHost?.Refresh();
 
+            // Same layout as the other plugins: panel, pin, commands, options, About.
             const byte VK_LEFT = 0x25, VK_RIGHT = 0x27;
-            Commands.Add("Open TIFF XML...", Safe(OpenTiffFromDialog));
-            // Keep the panel at index 1: Notepad++ stores this index in config.xml to restore the docked
-            // panel at startup, and older versions registered the panel with id 1.
-            _panelCmdIndex = Commands.Add("Image panel", Safe(ToggleImagePanel));
-            Commands.Add("Open TIFF stack (folder)...", Safe(OpenStackFromFolderDialog));
+            _panelCmdIndex = Commands.Add("Toggle Image Panel", Safe(ToggleImagePanel));
+            _pinCmdIndex = Commands.Add("Pin Image Panel to Current Image", Safe(PinImagePanel));
             Commands.Add("-", null);
-            Commands.Add("Next slice", Safe(() => _stacks.Step(+1)), false, new ShortcutKey(false, true, false, VK_RIGHT));
-            Commands.Add("Previous slice", Safe(() => _stacks.Step(-1)), false, new ShortcutKey(false, true, false, VK_LEFT));
-            _highlightCmdIndex = Commands.Add("Highlight changes to previous slice", Safe(ToggleHighlight), true);
-            Commands.Add("Values across stack (element at caret)", Safe(() => _stacks.ShowValuesAtCaret()), false,
+            Commands.Add("Open TIFF...", Safe(OpenTiffFromDialog));
+            Commands.Add("Open TIFF Stack (Folder)...", Safe(OpenStackFromFolderDialog));
+            Commands.Add("-", null);
+            Commands.Add("Next Slice", Safe(() => _stacks.Step(+1)), false, new ShortcutKey(false, true, false, VK_RIGHT));
+            Commands.Add("Previous Slice", Safe(() => _stacks.Step(-1)), false, new ShortcutKey(false, true, false, VK_LEFT));
+            Commands.Add("Values Across Stack (Element at Caret)", Safe(() => _stacks.ShowValuesAtCaret()), false,
                 new ShortcutKey(true, true, false, (byte)'V'));
+            Commands.Add("-", null);
+            _highlightCmdIndex = Commands.Add("Highlight Changes to Previous Slice", Safe(ToggleHighlight), _settings.HighlightChanges);
             Commands.Add("-", null);
             Commands.Add("About", Safe(ShowAbout));
 
@@ -131,6 +136,9 @@ namespace TiffPlusPlus
         public static void SetPanelChecked(bool isChecked) =>
             _host.SetMenuItemCheck(Commands.GetCmdId(_panelCmdIndex), isChecked);
 
+        public static void SetPinChecked(bool isChecked) =>
+            _host.SetMenuItemCheck(Commands.GetCmdId(_pinCmdIndex), isChecked);
+
         public static void ReportError(Exception ex) =>
             MessageBox.Show(ex.ToString(), PluginName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 
@@ -193,11 +201,22 @@ namespace TiffPlusPlus
             }
         }
 
+        private static ImagePanelHost PanelHost =>
+            _panelHost ?? (_panelHost = new ImagePanelHost(_host, _settings, _panelCmdIndex, CurrentImageContext,
+                (key, index) => _stacks.GoTo(key, index)));
+
         private static void ToggleImagePanel()
         {
-            if (_panelHost == null)
-                _panelHost = new ImagePanelHost(_host, _panelCmdIndex, CurrentImageContext, (key, index) => _stacks.GoTo(key, index));
-            _panelHost.Toggle();
+            // Before NPPN_READY, Notepad++ restores the docked panel: show it, never toggle it off.
+            if (!_ready) PanelHost.ShowForRestore();
+            else PanelHost.Toggle();
+        }
+
+        private static void PinImagePanel()
+        {
+            // Older versions registered the panel with id 1 (this command): restore the panel instead.
+            if (!_ready) PanelHost.ShowForRestore();
+            else PanelHost.TogglePinFromMenu();
         }
 
         private static void ToggleHighlight()
@@ -205,6 +224,8 @@ namespace TiffPlusPlus
             bool enabled = !_stacks.HighlightChanges;
             _stacks.SetHighlightChanges(enabled);
             _host.SetMenuItemCheck(Commands.GetCmdId(_highlightCmdIndex), enabled);
+            _settings.HighlightChanges = enabled;
+            _settings.Save();
         }
 
         private static string FolderName(string folder) =>
@@ -214,7 +235,7 @@ namespace TiffPlusPlus
             MessageBox.Show(
                 "Shows the XML embedded in TIFF images (*.tiff, *.tif) with XML highlighting.\r\n" +
                 "Only the TIFF header and directory are read, never the pixel data.\r\n\r\n" +
-                "Plugins > " + PluginName + " > Image panel (or the toolbar button) opens a viewer\r\n" +
+                "Plugins > " + PluginName + " > Toggle Image Panel (or the toolbar button) opens a viewer\r\n" +
                 "for the image of the active tab.\r\n\r\n" +
                 "Stacks: drop a folder or several TIFF files. Alt+Left/Right switches slices,\r\n" +
                 "changed lines are highlighted, Ctrl+Alt+V charts the value at the caret across all slices.",

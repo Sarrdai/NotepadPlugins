@@ -16,8 +16,8 @@ public:
     HWND handle() const { return hwnd_; }
     intptr_t call(UINT message, uintptr_t wParam = 0, intptr_t lParam = 0) const;
 
-    UINT codePage() const;     // Windows code page of the document bytes
-    std::string eol() const;   // "\r\n", "\n" or "\r"
+    UINT codePage() const;    // Windows code page of the document bytes
+    std::string eol() const;  // "\r\n", "\n" or "\r"
     bool readOnly() const;
 
     intptr_t length() const;
