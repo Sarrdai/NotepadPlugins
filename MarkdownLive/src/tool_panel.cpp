@@ -4,6 +4,7 @@
 #include <uxtheme.h>
 #include <windowsx.h>
 
+#include <cmath>
 #include <algorithm>
 #include <initializer_list>
 #include <memory>
