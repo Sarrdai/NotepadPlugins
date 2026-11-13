@@ -264,7 +264,30 @@ namespace TiffPlusPlus
                     ReportError(ex);
                 }
             }
+            else if (msg == Win32.WM_COMMAND && (wParam.ToInt64() & 0xFFFF) == NppMsg.IDM_EDIT_PASTE)
+            {
+                try
+                {
+                    if (HandlePaste())
+                        return IntPtr.Zero;
+                }
+                catch (Exception ex)
+                {
+                    ReportError(ex);
+                }
+            }
             return Win32.CallWindowProc(_originalWndProc, hWnd, msg, wParam, lParam);
+        }
+
+        /// <summary>
+        /// Edit > Paste (Ctrl+V) with files copied in Explorer (also from network drives): opens TIFFs and TIFF folders
+        /// like a drop, directly from their location. Clipboards with text are pasted by Notepad++ as usual.
+        /// </summary>
+        private static bool HandlePaste()
+        {
+            if (Clipboard.ContainsText() || !Clipboard.ContainsFileDropList()) return false;
+            var files = Clipboard.GetFileDropList().Cast<string>().ToList();
+            return OpenFiles(files);
         }
 
         /// <summary>Opens dropped TIFFs as XML before Notepad++ reads the whole binary file.</summary>
@@ -279,6 +302,17 @@ namespace TiffPlusPlus
                 files.Add(sb.ToString());
             }
 
+            if (!OpenFiles(files)) return false;
+            Win32.DragFinish(hDrop);
+            return true;
+        }
+
+        /// <summary>
+        /// Opens TIFFs as XML views (several files or folders as stacks) and other files normally.
+        /// Returns false without doing anything if the list contains no TIFF, so Notepad++ handles it.
+        /// </summary>
+        private static bool OpenFiles(IReadOnlyList<string> files)
+        {
             var tiffs = files.Where(TiffMetadataReader.IsTiffPath).ToList();
             var tiffFolders = files.Where(f => Directory.Exists(f) && TiffStack.FilesInFolder(f).Any()).ToList();
 
@@ -286,7 +320,6 @@ namespace TiffPlusPlus
             if (tiffs.Count == 0 && tiffFolders.Count == 0)
                 return false;
 
-            Win32.DragFinish(hDrop);
             foreach (string file in files.Where(f => !tiffs.Contains(f) && !Directory.Exists(f)))
                 _host.OpenFile(file);
             foreach (string folder in tiffFolders)
