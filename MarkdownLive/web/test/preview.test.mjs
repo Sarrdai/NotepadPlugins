@@ -81,14 +81,14 @@ await page.locator('input.task-checkbox').first().click();
 await page.locator('a[href="docs/readme.md"]').click();
 await page.locator('table td').first().dblclick();
 let out = await outbox();
-const taskLine = sample.split('\n').indexOf('- [ ] open task');
+const taskLine = sample.split(/\r?\n/).indexOf('- [ ] open task');
 assert.deepEqual(out.find((m) => m.type === 'toggleTask'), { type: 'toggleTask', line: taskLine });
 assert.deepEqual(out.find((m) => m.type === 'openLink'), { type: 'openLink', href: 'docs/readme.md' });
-const tableLine = sample.split('\n').indexOf('| a    |   b    |     c |');
+const tableLine = sample.split(/\r?\n/).indexOf('| a    |   b    |     c |');
 assert.equal(out.find((m) => m.type === 'gotoLine')?.line, tableLine, 'double click maps to source line');
 
 // --- scroll sync: editor -> preview
-const mermaidLine = sample.split('\n').indexOf('```mermaid');
+const mermaidLine = sample.split(/\r?\n/).indexOf('```mermaid');
 await send({ type: 'scroll', line: mermaidLine });
 const top = await page.locator('.mermaid-block').evaluate((el) => el.getBoundingClientRect().top);
 assert.ok(Math.abs(top) < 3, `mermaid block should be at the top (got ${top})`);
@@ -96,7 +96,7 @@ assert.ok(Math.abs(top) < 3, `mermaid block should be at the top (got ${top})`);
 // --- scroll sync: preview -> editor
 await page.waitForTimeout(350);
 await outbox();
-const pyLine = sample.split('\n').indexOf('```python');
+const pyLine = sample.split(/\r?\n/).indexOf('```python');
 await page.locator('.code-block').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY));
 await page.waitForFunction(() => window.__mdlive.outbox.some((m) => m.type === 'scroll'));
 out = await outbox();
