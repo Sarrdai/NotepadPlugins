@@ -28,6 +28,8 @@
   #hist { width: 100%; height: 56px; display: block; cursor: ew-resize; background: #1a1a1a; }
   .row { display: grid; grid-template-columns: 44px 1fr 70px; gap: 6px; align-items: center; margin-top: 3px; }
   .row input[type=range] { width: 100%; }
+  .tools { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 3px; }
+  .tools > span:first-child { margin-right: 2px; }
   #stage { position: relative; flex: 1; min-height: 0; }
   #canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
   #canvas.pan { cursor: grabbing; }
@@ -49,14 +51,13 @@
     <button id="zoomOut" title="Zoom out (-)">&minus;</button>
     <button id="zoomIn" title="Zoom in (+)">+</button>
     <span class="sep"></span>
-    <button id="auto" title="Auto contrast on the whole image (A)">Auto</button>
-    <button id="autoView" title="Auto contrast on the visible region (V)">Auto view</button>
     <button id="toggleContrast" title="Show/hide manual contrast controls (C)">Contrast</button>
     <span class="sep"></span>
     <label title="Invert gray values (I)"><input type="checkbox" id="invert">Invert</label>
     <label title="Keep contrast and zoom when switching between images"><input type="checkbox" id="lock">Lock</label>
     <span class="sep"></span>
     <button id="save" title="Save the image with the current contrast as PNG">PNG</button>
+    <button id="copy" title="Copy the image with the current contrast to the clipboard (Ctrl+C)">Copy</button>
     <button id="helpBtn" title="Mouse and keyboard help">?</button>
   </div>
 
@@ -81,14 +82,17 @@
     <div class="row"><span>Min</span><input type="range" id="loRange"><input type="number" id="loNum"></div>
     <div class="row"><span>Max</span><input type="range" id="hiRange"><input type="number" id="hiNum"></div>
     <div class="row"><span>Gamma</span><input type="range" id="gammaRange" min="-200" max="200" value="0"><input type="number" id="gammaNum" step="0.05" min="0.1" max="10" value="1"></div>
-    <div class="row" style="grid-template-columns: 44px auto auto 1fr">
+    <div class="tools">
+      <span>Contrast</span>
+      <button id="auto" title="Auto contrast on the whole image (A)">Full</button>
+      <button id="autoView" title="Auto contrast on the visible region (V)">View</button>
+      <span class="sep"></span>
       <span>Clip</span>
       <select id="clip" title="Percentage of darkest/brightest pixels ignored by auto contrast">
         <option value="0">0 %</option><option value="0.1">0.1 %</option><option value="0.5" selected>0.5 %</option>
         <option value="1">1 %</option><option value="2">2 %</option><option value="5">5 %</option>
       </select>
-      <button id="fullRange" title="Use the full data range (min..max of the image)">Full range</button>
-      <span></span>
+      <button id="fullRange" title="Use the full data range (min..max of the image), sets clip to 0 %">Full range</button>
     </div>
   </div>
 
@@ -106,7 +110,8 @@
       Slider, <kbd>PgUp</kbd>/<kbd>PgDn</kbd>, <kbd>Home</kbd>/<kbd>End</kbd>, <kbd>P</kbd> play<br>
       <b>Keys</b><br>
       <kbd>F</kbd>/<kbd>Esc</kbd> reset, <kbd>1</kbd> 1:1, <kbd>+</kbd>/<kbd>-</kbd> zoom,
-      <kbd>A</kbd> auto, <kbd>V</kbd> auto view, <kbd>I</kbd> invert, <kbd>C</kbd> contrast panel
+      <kbd>A</kbd> auto, <kbd>V</kbd> auto view, <kbd>I</kbd> invert, <kbd>C</kbd> contrast panel,
+      <kbd>Ctrl+C</kbd> copy image
     </div>
   </div>
 
@@ -486,6 +491,7 @@ canvas.addEventListener("dblclick", fit);
 window.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT" && e.target.type === "number") return;
   const cx = mouse ? mouse.x : canvas.clientWidth / 2, cy = mouse ? mouse.y : canvas.clientHeight / 2;
+  if (e.ctrlKey && (e.key === "c" || e.key === "C")) { copyImage(); e.preventDefault(); return; }
   switch (e.key) {
     case " ": spaceDown = true; e.preventDefault(); break;
     case "f": case "F": case "Escape": fit(); break;
@@ -535,11 +541,15 @@ $("zoomOut").onclick = () => zoomAt(0.8, canvas.clientWidth / 2, canvas.clientHe
 $("auto").onclick = () => autoContrast();
 $("autoView").onclick = autoContrastView;
 $("toggleContrast").onclick = toggleContrastPanel;
-$("fullRange").onclick = () => img && setWindow(img.min, img.max);
+$("fullRange").onclick = () => {
+  $("clip").value = "0";   // full range == auto contrast without clipping; not saved as default
+  if (img) setWindow(img.min, img.max);
+};
 $("invert").onchange = e => { win.invert = e.target.checked; updateContrastControls(); invalidate(true); };
 $("clip").onchange = e => { settings.clip = e.target.value; saveSettings(); autoContrast(); };
 $("helpBtn").onclick = () => $("help").classList.toggle("show");
 $("save").onclick = savePng;
+$("copy").onclick = copyImage;
 
 $("loRange").oninput = e => img && setWindow(Math.min(+e.target.value * img.valueScale, win.hi - 1), win.hi);
 $("hiRange").oninput = e => img && setWindow(win.lo, Math.max(+e.target.value * img.valueScale, win.lo + 1));
@@ -618,6 +628,16 @@ function savePng() {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   }, "image/png");
+}
+
+function copyImage() {
+  if (!img) return;
+  if (dirty.lut) render();
+  // Pass the blob as promise so the click still counts as user activation when encoding takes long.
+  const png = new Promise((resolve, reject) => src.toBlob(b => b ? resolve(b) : reject(new Error("encoding failed")), "image/png"));
+  navigator.clipboard.write([new ClipboardItem({ "image/png": png })])
+    .then(() => $("sName").textContent = "Image copied to clipboard")
+    .catch(err => $("sName").textContent = "Copy failed: " + err.message);
 }
 
 // ---------------------------------------------------------------- settings (per user, browser storage)

@@ -189,7 +189,7 @@ namespace TiffPlusPlus
         private static void ToggleImagePanel()
         {
             if (_panelHost == null)
-                _panelHost = new ImagePanelHost(_host, CurrentImageContext, (key, index) => _stacks.GoTo(key, index));
+                _panelHost = new ImagePanelHost(_host, _panelCmdIndex, CurrentImageContext, (key, index) => _stacks.GoTo(key, index));
             _panelHost.Toggle();
         }
 

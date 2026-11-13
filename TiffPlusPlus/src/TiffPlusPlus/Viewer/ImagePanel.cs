@@ -28,13 +28,16 @@ namespace TiffPlusPlus.Viewer
         private readonly NppHost _npp;
         private readonly Func<ImageContext> _currentContext;
         private readonly Action<string, int> _sliceRequested;
+        private readonly int _commandIndex;
         private ImagePanelForm _form;
         private IntPtr _tbDataPtr;
         private bool _active;
 
-        public ImagePanelHost(NppHost npp, Func<ImageContext> currentContext, Action<string, int> sliceRequested)
+        /// <param name="commandIndex">Menu index of the panel command; Notepad++ calls it to restore the panel at startup.</param>
+        public ImagePanelHost(NppHost npp, int commandIndex, Func<ImageContext> currentContext, Action<string, int> sliceRequested)
         {
             _npp = npp;
+            _commandIndex = commandIndex;
             _currentContext = currentContext;
             _sliceRequested = sliceRequested;
         }
@@ -83,7 +86,7 @@ namespace TiffPlusPlus.Viewer
             {
                 HClient = _form.Handle,
                 PszName = Marshal.StringToHGlobalUni("TIFF Image"),
-                DlgId = 1,
+                DlgId = _commandIndex,
                 UMask = NppMsg.DWS_DF_CONT_RIGHT,
                 PszModuleName = Marshal.StringToHGlobalUni(Path.GetFileName(typeof(Plugin).Assembly.Location)),
             };
