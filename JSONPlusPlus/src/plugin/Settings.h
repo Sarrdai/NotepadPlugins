@@ -24,6 +24,10 @@ struct Settings {
     bool allowComments = true;  // JSONC: do not report comments as errors
     bool syncCaret = true;      // keep the caret of both views on the same JSON position
 
+    // Layout (panel docked below the editor)
+    bool autoFitHeight = true;        // size the panel so the editor just shows the whole document
+    int maxEditorHeightPercent = 50;  // upper limit for the editor's share of the height
+
     // Synchronisation timing
     int documentToPanelDelayMs = 150;  // debounce for changes made in the editor
     int panelToDocumentDelayMs = 120;  // debounce for changes made in the pretty view

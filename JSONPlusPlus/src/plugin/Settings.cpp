@@ -54,6 +54,8 @@ void Settings::load(const std::wstring& ini) {
     spaceAfterColon = readBool(ini, L"SpaceAfterColon", d.spaceAfterColon);
     allowComments = readBool(ini, L"AllowComments", d.allowComments);
     syncCaret = readBool(ini, L"SyncCaret", d.syncCaret);
+    autoFitHeight = readBool(ini, L"AutoFitHeight", d.autoFitHeight);
+    maxEditorHeightPercent = readInt(ini, L"MaxEditorHeightPercent", d.maxEditorHeightPercent, 10, 90);
     documentToPanelDelayMs = readInt(ini, L"DocumentToPanelDelayMs", d.documentToPanelDelayMs, 10, 10000);
     panelToDocumentDelayMs = readInt(ini, L"PanelToDocumentDelayMs", d.panelToDocumentDelayMs, 10, 10000);
     reformatDelayMs = readInt(ini, L"ReformatDelayMs", d.reformatDelayMs, 0, 600000);
@@ -70,6 +72,8 @@ void Settings::save(const std::wstring& ini) const {
     writeInt(ini, L"SpaceAfterColon", spaceAfterColon);
     writeInt(ini, L"AllowComments", allowComments);
     writeInt(ini, L"SyncCaret", syncCaret);
+    writeInt(ini, L"AutoFitHeight", autoFitHeight);
+    writeInt(ini, L"MaxEditorHeightPercent", maxEditorHeightPercent);
     writeInt(ini, L"DocumentToPanelDelayMs", documentToPanelDelayMs);
     writeInt(ini, L"PanelToDocumentDelayMs", panelToDocumentDelayMs);
     writeInt(ini, L"ReformatDelayMs", reformatDelayMs);

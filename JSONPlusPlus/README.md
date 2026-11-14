@@ -5,18 +5,20 @@ The panel and the editor stay synchronised in both directions, and the file itse
 saving always writes the compact form.
 
 ```
- Notepad++ editor (compact, saved to disk)        JSON++ panel (pretty, view only)
-┌──────────────────────────────────────────┐     ┌──────────────────────────────┐
-│{"name":"demo","tags":["a","b"],"n":1}    │ ⇄  │{                              │
-│                                          │     │    "name": "demo",            │
-│                                          │     │    "tags": [                  │
-│                                          │     │        "a",                   │
-│                                          │     │        "b"                    │
-│                                          │     │    ],                         │
-│                                          │     │    "n": 1                     │
-│                                          │     │}                              │
-└──────────────────────────────────────────┘     │✔ Valid JSON • 38 bytes compact│
-                                                 └──────────────────────────────┘
+ Notepad++ editor (compact, saved to disk) - only as high as its content
+┌──────────────────────────────────────────────────────────┐
+│{"name":"demo","tags":["a","b"],"n":1}                    │
+╞══════════════════════════════════════════════════════════╡ ⇅
+│{                                                         │ JSON++ panel (pretty, editable)
+│    "name": "demo",                                       │ uses the remaining height
+│    "tags": [                                             │
+│        "a",                                              │
+│        "b"                                               │
+│    ],                                                    │
+│    "n": 1                                                │
+│}                                                         │
+│✔ Valid JSON • 38 bytes compact                       Pin │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ## Features
@@ -24,6 +26,12 @@ saving always writes the compact form.
 - **Opens automatically** for JSON files (`.json`, `.jsonc`, `.geojson`, ... or language *JSON*) whose
   content is compact: it starts with `{`/`[` and has (almost) no line breaks.
 - **Pretty view in a separate panel.** Opening it does not change the file.
+- **Docked below the editor, sized to fit:** the editor keeps just the height its (usually one line
+  of) compact JSON needs, the panel gets the rest. The height is fitted when the panel opens and
+  when the number of lines in the editor changes; a height you set by dragging the splitter is kept
+  until then. At most `MaxEditorHeightPercent` of the height goes to the editor. If you dock the panel
+  elsewhere (left, right, floating), nothing is resized. Notepad++ remembers where a panel was
+  docked: if JSON++ was docked on the right before, drag it to the bottom once.
 - **Edit on both sides:**
   - Edits in the editor show up in the panel, re-indented.
   - Edits in the panel are written into the document as a **minimal compact edit**. Only the changed
@@ -81,6 +89,8 @@ closing the panel or the file releases the pin.
 | `SpaceAfterColon` | `1` | `"a": 1` instead of `"a":1`. |
 | `AllowComments` | `1` | Do not report `//` and `/* */` comments as errors. |
 | `SyncCaret` | `1` | Caret synchronisation. |
+| `AutoFitHeight` | `1` | When docked at the bottom, size the panel so the editor just shows the whole document. |
+| `MaxEditorHeightPercent` | `50` | Upper limit (10-90) for the editor's share of the height when fitting. |
 | `DocumentToPanelDelayMs` | `150` | Debounce for editor → panel. |
 | `PanelToDocumentDelayMs` | `120` | Debounce for panel → editor. |
 | `ReformatDelayMs` | `1500` | Idle time before the panel is re-indented (`0` = never). |

@@ -84,6 +84,9 @@ private:
     void setStatus(const std::wstring& text, bool error);
     HWND viewShowingDocument() const;
     FormatOptions formatOptions() const;
+    void fitHeight();
+    bool findDockFrame(HWND& manager, HWND& container) const;
+    HWND findSplitterAbove(const RECT& container) const;
     void restartTimer(UINT_PTR id, int delayMs);
     void stopTimers();
 
@@ -121,6 +124,7 @@ private:
     bool _panelDirty = false;    // panel has edits not yet written to the document
     bool _pushDeferred = false;  // panel contains an unterminated string/comment
     int _lineNumberDigits = 0;
+    sptr_t _fittedLines = -1;  // display lines of the document at the last height fit
 };
 
 }  // namespace jpp
