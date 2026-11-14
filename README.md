@@ -7,12 +7,14 @@ Collection of Notepad++ plugins. Each plugin lives in its own folder with its ow
 | [`JSONPlusPlus/`](JSONPlusPlus) | JSON++ – synchronized, editable pretty view for compact JSON | C++20, CMake |
 | [`TiffPlusPlus/`](TiffPlusPlus) | Tiff++ – embedded XML and image viewer for TIFF | C# / .NET Framework 4.8, WebView2 |
 | [`MarkdownLive/`](MarkdownLive) | Markdown Live – live preview and editing helpers | C++17, CMake, WebView2 |
+| [`PathTrail/`](PathTrail) | PathTrail – history of opened files with clickable paths, search and folder hotspots | C# / .NET Framework 4.8, WebView2 |
 
 ## Common behavior
 
 - **Menu layout:** toggle panel, pin panel, commands, options, About – Title Case labels.
 - **Panels** are titled with the plugin name, close automatically when a document of another type is activated and
-  reopen for the next matching document. The **pin** (in the panel and in the menu) keeps a panel open on its document.
+  reopen for the next matching document (except PathTrail, whose panel belongs to no document). The **pin** (in the
+  panel and in the menu) keeps a panel open on its document.
 - **Toolbar button** for each panel, with icons for light and dark mode.
 - **Settings** are stored as `<Plugin>.ini` in the Notepad++ plugin config folder
   (`Settings > Open Plugins Config Folder`); WebView2 data of the panels lives there as well.
@@ -24,7 +26,7 @@ All plugins are built, tested and uploaded the same way on `windows-latest` (Vis
 
 | Workflow | Trigger | Result |
 | :-- | :-- | :-- |
-| *JSON++*, *Tiff++*, *MarkdownLive* | push/PR with changes in the plugin folder, manually (*Run workflow*) | `<Plugin>-x64` |
+| *JSON++*, *Tiff++*, *MarkdownLive*, *PathTrail* | push/PR with changes in the plugin folder, manually (*Run workflow*) | `<Plugin>-x64` |
 | *Bundle* | manually (*Run workflow*), tag `v*` | all single artifacts + `NotepadPlugins-x64`; tags also create a release with all zips |
 | *Format* | push/PR with C++ changes | checks the sources against `.clang-format` |
 
