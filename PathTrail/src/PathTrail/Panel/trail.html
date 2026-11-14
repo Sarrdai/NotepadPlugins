@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>PathTrail</title>
+<style>
+  :root[data-theme="dark"] {
+    --bg: #1e1e1e; --panel: #252526; --border: #3c3c3c; --text: #d4d4d4; --muted: #8a8a8a;
+    --accent: #3794ff; --hover: #2a2d2e; --select: #04395e; --mark: rgba(255, 200, 0, 0.3); --input: #333;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff; --panel: #f3f3f3; --border: #d4d4d4; --text: #1f1f1f; --muted: #6e6e6e;
+    --accent: #005fb8; --hover: #ececec; --select: #cce4f7; --mark: rgba(255, 190, 0, 0.35); --input: #fff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 12px "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  .bar { display: flex; gap: 4px; align-items: center; padding: 4px 6px;
+    background: var(--panel); border-bottom: 1px solid var(--border); }
+  input, select { background: var(--input); color: var(--text); border: 1px solid var(--border);
+    border-radius: 3px; font: inherit; height: 22px; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  #query { flex: 1; min-width: 60px; padding: 0 6px; }
+  .tabs { display: flex; }
+  .tab { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted);
+    font: inherit; padding: 3px 8px; cursor: pointer; }
+  .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .tab:hover { color: var(--text); }
+  .spacer { flex: 1; }
+  label.opt { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); }
+  #content { flex: 1; overflow-y: auto; padding: 2px 0 8px; }
+  h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+    margin: 10px 8px 2px; display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  h2 small { text-transform: none; letter-spacing: 0; font-weight: normal; }
+  .row { padding: 3px 8px; border-left: 2px solid transparent; }
+  .row:hover { background: var(--hover); }
+  .row.selected { background: var(--select); border-left-color: var(--accent); }
+  .crumbs { display: flex; flex-wrap: wrap; align-items: baseline; line-height: 17px; }
+  .seg { cursor: pointer; padding: 0 1px; border-radius: 2px; white-space: nowrap; }
+  .seg:hover { color: var(--accent); text-decoration: underline; }
+  .sep { color: var(--muted); padding: 0 3px; user-select: none; }
+  .seg.file { font-weight: 600; }
+  .seg.leaf { font-weight: 600; }
+  .meta { color: var(--muted); font-size: 11px; }
+  .missing .crumbs { opacity: 0.5; }
+  .missing .seg.file { text-decoration: line-through; }
+  mark { background: var(--mark); color: inherit; border-radius: 2px; }
+  .empty { color: var(--muted); padding: 16px 10px; line-height: 1.5; }
+  .score { display: inline-block; height: 4px; background: var(--accent); border-radius: 2px; vertical-align: middle;
+    margin-right: 6px; opacity: 0.7; }
+  #menu { position: fixed; display: none; background: var(--panel); border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); padding: 3px 0; z-index: 10; min-width: 180px; }
+  #menu div { padding: 4px 14px; cursor: pointer; white-space: nowrap; }
+  #menu div:hover { background: var(--select); }
+  #menu hr { border: none; border-top: 1px solid var(--border); margin: 3px 0; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <input id="query" type="search" placeholder="Search paths (all words)…" spellcheck="false"
+      title="Every word must occur in the path. ↑/↓ select, Enter opens, Esc clears">
+  </div>
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tabHistory" role="tab" aria-selected="true">History</button>
+      <button class="tab" id="tabFolders" role="tab" aria-selected="false">Hotspots</button>
+    </div>
+    <span class="spacer"></span>
+    <label class="opt" title="What a click on a folder in a path does (right click shows all actions)">Folder click
+      <select id="folderClick">
+        <option value="explorer">Explorer</option>
+        <option value="terminal">Terminal</option>
+        <option value="workspace">Workspace</option>
+      </select>
+    </label>
+  </div>
+  <div id="content"></div>
+  <div id="menu"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const post = msg => window.chrome && chrome.webview && chrome.webview.postMessage(msg);
+
+let data = { history: [], projects: [], working: [], range: "week" };
+let search = { query: "", results: [] };
+let missing = new Set();
+let tab = "history";
+let selected = -1;
+
+if (window.chrome && chrome.webview) {
+  chrome.webview.addEventListener("message", e => onHostMessage(e.data));
+  post({ type: "ready" });
+}
+
+function onHostMessage(msg) {
+  switch (msg.type) {
+    case "theme": document.documentElement.dataset.theme = msg.dark ? "dark" : "light"; break;
+    case "settings": $("folderClick").value = msg.folderClick; break;
+    case "data": data = msg; render(); break;
+    case "search": if (msg.query === $("query").value) { search = msg; selected = msg.results.length ? 0 : -1; render(); } break;
+    case "missing": missing = new Set(msg.paths.map(p => p.toLowerCase())); markMissing(); break;
+    case "focusSearch": $("query").focus(); $("query").select(); break;
+  }
+}
+
+// --- Rendering ------------------------------------------------------------------------------
+
+function render() {
+  const content = $("content");
+  content.textContent = "";
+  if (search.query.trim()) renderSearch(content);
+  else if (tab === "history") renderHistory(content);
+  else renderFolders(content);
+  markMissing();
+}
+
+function renderHistory(content) {
+  if (!data.history.length) return empty(content, "No files yet. Every file you open in Notepad++ appears here.");
+  for (const day of data.history) {
+    content.append(heading(dayLabel(day.day), day.files.length + (day.files.length === 1 ? " file" : " files")));
+    for (const f of day.files) content.append(fileRow(f));
+  }
+}
+
+function renderSearch(content) {
+  const terms = search.query.trim().toLowerCase().split(/\s+/);
+  if (!search.results.length) return empty(content, "No matching paths.");
+  content.append(heading("Results", search.results.length + (search.results.length === 200 ? "+" : "")));
+  search.results.forEach((f, i) => {
+    const row = fileRow(f, terms, true);
+    if (i === selected) row.classList.add("selected");
+    row.dataset.index = i;
+    content.append(row);
+  });
+}
+
+function renderFolders(content) {
+  const h = heading("Projects", "");
+  const range = document.createElement("select");
+  for (const [value, text] of [["today", "Today"], ["week", "7 days"], ["all", "All"]]) range.add(new Option(text, value));
+  range.value = data.range;
+  range.title = "Time span for the hotspots";
+  range.onchange = () => post({ type: "range", value: range.value });
+  h.querySelector("small").replaceWith(range);
+  content.append(h);
+  folderList(content, data.projects, "Folders whose activity spreads over several subfolders (e.g. an experiment) appear here.");
+  content.append(heading("Working folders", "files opened directly inside"));
+  folderList(content, data.working, "No folders yet.");
+}
+
+function folderList(content, folders, emptyText) {
+  if (!folders.length) return empty(content, emptyText);
+  const max = Math.max(...folders.map(f => f.score));
+  for (const f of folders) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.dataset.path = f.path;
+    row.append(crumbs(f.segments, false));
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const bar = document.createElement("span");
+    bar.className = "score";
+    bar.style.width = Math.max(4, 40 * f.score / max) + "px";
+    meta.append(bar, [
+      f.files + (f.files === 1 ? " file" : " files"),
+      f.subfolders > 1 ? f.subfolders + " active subfolders" : null,
+      "last " + timeLabel(f.last, true),
+    ].filter(Boolean).join(" · "));
+    row.append(meta);
+    content.append(row);
+  }
+}
+
+function fileRow(f, terms, withDate) {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.dataset.path = f.path;
+  row.append(crumbs(f.segments, true, terms));
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = [
+    timeLabel(f.last, withDate),
+    f.opens > 1 ? f.opens + "× opened" : null,
+    f.seconds >= 60 ? duration(f.seconds) + " active" : null,
+  ].filter(Boolean).join(" · ");
+  row.append(meta);
+  return row;
+}
+
+/** Breadcrumb: every folder is clickable, the last part is the file (or the folder itself). */
+function crumbs(segments, isFile, terms) {
+  const el = document.createElement("div");
+  el.className = "crumbs";
+  segments.forEach((s, i) => {
+    if (i > 0) {
+      const sep = document.createElement("span");
+      sep.className = "sep";
+      sep.textContent = "›";
+      el.append(sep);
+    }
+    const last = i === segments.length - 1;
+    const seg = document.createElement("span");
+    seg.className = "seg" + (last ? (isFile ? " file" : " leaf") : "");
+    seg.dataset.path = s.path;
+    seg.dataset.kind = last && isFile ? "file" : "folder";
+    seg.title = s.path;
+    highlight(seg, s.label, terms);
+    el.append(seg);
+  });
+  return el;
+}
+
+function highlight(el, text, terms) {
+  if (!terms || !terms.length) { el.textContent = text; return; }
+  const lower = text.toLowerCase();
+  const marks = new Array(text.length).fill(false);
+  for (const t of terms) {
+    for (let i = lower.indexOf(t); t && i >= 0; i = lower.indexOf(t, i + 1))
+      for (let k = i; k < i + t.length; k++) marks[k] = true;
+  }
+  let i = 0;
+  while (i < text.length) {
+    let j = i;
+    while (j < text.length && marks[j] === marks[i]) j++;
+    const part = text.slice(i, j);
+    if (marks[i]) { const m = document.createElement("mark"); m.textContent = part; el.append(m); }
+    else el.append(part);
+    i = j;
+  }
+}
+
+function markMissing() {
+  for (const row of document.querySelectorAll(".row")) {
+    const isFile = row.querySelector(".seg.file");
+    row.classList.toggle("missing", !!isFile && missing.has(row.dataset.path.toLowerCase()));
+    if (isFile) isFile.title = missing.has(row.dataset.path.toLowerCase()) ? "File no longer exists" : row.dataset.path;
+  }
+}
+
+function heading(text, note) {
+  const h = document.createElement("h2");
+  const span = document.createElement("span");
+  span.textContent = text;
+  const small = document.createElement("small");
+  small.textContent = note;
+  h.append(span, small);
+  return h;
+}
+
+function empty(content, text) {
+  const div = document.createElement("div");
+  div.className = "empty";
+  div.textContent = text;
+  content.append(div);
+}
+
+function dayLabel(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const day = new Date(y, m - 1, d);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - day) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  return day.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: diff > 300 ? "numeric" : undefined });
+}
+
+function timeLabel(iso, withDate) {
+  const t = new Date(iso);
+  const time = t.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  if (!withDate) return time;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return t >= today ? time : t.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + " " + time;
+}
+
+function duration(seconds) {
+  const m = Math.round(seconds / 60);
+  return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + (m % 60) + " min";
+}
+
+// --- Interaction ----------------------------------------------------------------------------
+
+$("content").addEventListener("click", e => {
+  const seg = e.target.closest(".seg");
+  if (!seg) return;
+  if (seg.dataset.kind === "file") post({ type: "openFile", path: seg.dataset.path });
+  else post({ type: "folder", path: seg.dataset.path });
+});
+
+$("content").addEventListener("contextmenu", e => {
+  e.preventDefault();
+  const seg = e.target.closest(".seg");
+  const row = e.target.closest(".row");
+  if (!seg && !row) return hideMenu();
+  const path = seg ? seg.dataset.path : row.dataset.path;
+  const isFile = seg ? seg.dataset.kind === "file" : !!row.querySelector(".seg.file");
+  const items = isFile
+    ? [["Open", { type: "openFile", path }], ["Show in Explorer", { type: "showInExplorer", path }], null,
+       ["Copy path", { type: "copy", path }]]
+    : [["Open in Explorer", { type: "folder", path, action: "explorer" }],
+       ["Open terminal here", { type: "folder", path, action: "terminal" }],
+       ["Open as workspace", { type: "folder", path, action: "workspace" }],
+       ["Open file from here…", { type: "folder", path, action: "open" }], null,
+       ["Copy path", { type: "copy", path }]];
+  showMenu(e.clientX, e.clientY, items);
+});
+
+function showMenu(x, y, items) {
+  const menu = $("menu");
+  menu.textContent = "";
+  for (const item of items) {
+    if (!item) { menu.append(document.createElement("hr")); continue; }
+    const div = document.createElement("div");
+    div.textContent = item[0];
+    div.onclick = () => { hideMenu(); post(item[1]); };
+    menu.append(div);
+  }
+  menu.style.display = "block";
+  menu.style.left = Math.min(x, innerWidth - menu.offsetWidth - 2) + "px";
+  menu.style.top = Math.min(y, innerHeight - menu.offsetHeight - 2) + "px";
+}
+
+const hideMenu = () => { $("menu").style.display = "none"; };
+document.addEventListener("click", e => { if (!e.target.closest("#menu")) hideMenu(); });
+window.addEventListener("blur", hideMenu);
+
+let searchTimer = 0;
+$("query").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  const query = $("query").value;
+  if (!query.trim()) { search = { query: "", results: [] }; render(); post({ type: "search", query: "" }); return; }
+  searchTimer = setTimeout(() => post({ type: "search", query }), 120);
+});
+
+$("query").addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    $("query").value = "";
+    $("query").dispatchEvent(new Event("input"));
+  } else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && search.results.length) {
+    e.preventDefault();
+    selected = Math.max(0, Math.min(search.results.length - 1, selected + (e.key === "ArrowDown" ? 1 : -1)));
+    for (const row of document.querySelectorAll(".row")) row.classList.toggle("selected", +row.dataset.index === selected);
+    const row = document.querySelector(".row.selected");
+    if (row) row.scrollIntoView({ block: "nearest" });
+  } else if (e.key === "Enter" && selected >= 0 && search.results[selected]) {
+    post({ type: "openFile", path: search.results[selected].path });
+  }
+});
+
+function selectTab(name) {
+  tab = name;
+  $("tabHistory").setAttribute("aria-selected", String(name === "history"));
+  $("tabFolders").setAttribute("aria-selected", String(name === "folders"));
+  if (search.query) { $("query").value = ""; search = { query: "", results: [] }; post({ type: "search", query: "" }); }
+  render();
+}
+$("tabHistory").onclick = () => selectTab("history");
+$("tabFolders").onclick = () => selectTab("folders");
+$("folderClick").onchange = () => post({ type: "folderClick", value: $("folderClick").value });
+
+render();
+</script>
+</body>
+</html>

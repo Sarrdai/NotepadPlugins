@@ -1,0 +1,33 @@
+name: PathTrail
+
+on:
+  push:
+    branches: ['**']
+    paths: ['PathTrail/**', '.github/workflows/pathtrail.yml', '.github/actions/**']
+  pull_request:
+    paths: ['PathTrail/**', '.github/workflows/pathtrail.yml', '.github/actions/**']
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build:
+    name: PathTrail (x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: PathTrail
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: microsoft/setup-msbuild@v2
+      - run: dotnet test tests/PathTrail.Tests
+      # Full-framework MSBuild is required for the native export rewriting (UnmanagedExports).
+      - run: msbuild src/PathTrail/PathTrail.csproj -restore -p:Configuration=Release -p:Platform=x64 -v:minimal
+      # Single file: the WebView2 parts are embedded in the plugin dll.
+      - uses: ./.github/actions/upload-plugin
+        with:
+          name: PathTrail
+          files: PathTrail/src/PathTrail/bin/x64/Release/PathTrail.dll
+          readme: PathTrail/README.md

@@ -14,10 +14,12 @@ jobs:
     uses: ./.github/workflows/tiffplusplus.yml
   markdownlive:
     uses: ./.github/workflows/markdownlive.yml
+  pathtrail:
+    uses: ./.github/workflows/pathtrail.yml
 
   bundle:
     name: Bundle (x64)
-    needs: [jsonplusplus, tiffplusplus, markdownlive]
+    needs: [jsonplusplus, tiffplusplus, markdownlive, pathtrail]
     runs-on: ubuntu-latest
     permissions:
       contents: write
