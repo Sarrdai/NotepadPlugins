@@ -5,7 +5,10 @@
 #include "PrettyPanel.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
+#include <cwchar>
+#include <iterator>
 #include <string>
 
 #include "JsonCore.h"
@@ -23,9 +26,14 @@ constexpr UINT_PTR kTimerReformat = 3;
 constexpr UINT_PTR kTimerValidate = 4;
 constexpr UINT_PTR kTimerCaretFromView = 5;
 constexpr UINT_PTR kTimerCaretFromPanel = 6;
+constexpr UINT_PTR kTimerFitHeight = 7;
 
 constexpr int kValidateDelayMs = 250;
 constexpr int kCaretDelayMs = 40;
+constexpr int kFitHeightDelayMs = 100;  // lets the docking manager and line wrapping settle first
+
+// Window classes of the Notepad++ docking framework (DockingManager.h, DockingSplitter.h).
+constexpr wchar_t kDockingManagerClass[] = L"dockingManager";
 
 constexpr int kMarginNumbers = 0;
 constexpr int kMarginSymbols = 1;
@@ -85,6 +93,30 @@ std::wstring widen(std::string_view text) {
     std::wstring result(static_cast<std::size_t>(length), L'\0');
     ::MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), result.data(), length);
     return result;
+}
+
+struct SplitterSearch {
+    RECT container;
+    int tolerance;
+    HWND found;
+};
+
+// Finds a horizontal docking splitter directly above `container` (screen coordinates).
+BOOL CALLBACK findSplitterProc(HWND w, LPARAM param) {
+    auto& s = *reinterpret_cast<SplitterSearch*>(param);
+    wchar_t cls[64] = {};
+    ::GetClassNameW(w, cls, static_cast<int>(std::size(cls)));
+    if (!::IsWindowVisible(w) || !std::wcsstr(cls, L"plitter")) return TRUE;
+    RECT rc{};
+    ::GetWindowRect(w, &rc);
+    const bool horizontal = rc.right - rc.left > rc.bottom - rc.top && rc.bottom - rc.top <= s.tolerance;
+    const bool above = std::abs(rc.bottom - s.container.top) <= s.tolerance;
+    const bool overlaps = rc.left < s.container.right && rc.right > s.container.left;
+    if (horizontal && above && overlaps) {
+        s.found = w;
+        return FALSE;
+    }
+    return TRUE;
 }
 
 bool isDark(COLORREF c) {
@@ -161,7 +193,8 @@ bool PrettyPanel::create(int dockCommandIndex, std::function<void()> onClosedByU
     _dock.hClient = _hwnd;
     _dock.pszName = _dockTitle.c_str();
     _dock.dlgID = dockCommandIndex;
-    _dock.uMask = DWS_DF_CONT_RIGHT | DWS_ADDINFO;
+    // Below the editor: compact JSON is one long line, so the editor needs little height.
+    _dock.uMask = DWS_DF_CONT_BOTTOM | DWS_ADDINFO;
     _dock.pszAddInfo = _dockInfo.c_str();
     _dock.pszModuleName = _moduleName.c_str();
     return true;
@@ -173,7 +206,11 @@ void PrettyPanel::show() {
         ::SendMessageW(_npp._nppHandle, NPPM_DMMREGASDCKDLG, 0, reinterpret_cast<LPARAM>(&_dock));
         _registered = true;
     }
-    if (!_visible) ::SendMessageW(_npp._nppHandle, NPPM_DMMSHOW, 0, reinterpret_cast<LPARAM>(_hwnd));
+    if (!_visible) {
+        ::SendMessageW(_npp._nppHandle, NPPM_DMMSHOW, 0, reinterpret_cast<LPARAM>(_hwnd));
+        _fittedLines = -1;
+        restartTimer(kTimerFitHeight, kFitHeightDelayMs);
+    }
     _visible = true;
 }
 
@@ -235,6 +272,8 @@ void PrettyPanel::onSettingsChanged() {
     _editor.call(SCI_SETINDENT, indent);
     _editor.call(SCI_SETUSETABS, _settings.useTabs ? 1 : 0);
     if (_doc) refreshFromDocument();
+    _fittedLines = -1;
+    restartTimer(kTimerFitHeight, kFitHeightDelayMs);
 }
 
 // ---------------------------------------------------------------------------
@@ -369,6 +408,8 @@ void PrettyPanel::attach(UINT_PTR bufferId, HWND view, const std::wstring& title
 
     applyTheme();
     loadFromDocument();
+    _fittedLines = -1;
+    restartTimer(kTimerFitHeight, kFitHeightDelayMs);
 }
 
 void PrettyPanel::detach() {
@@ -428,6 +469,7 @@ void PrettyPanel::refreshFromDocument() {
     setPanelText(prettyPrint(_mirror.text(), formatOptions()));
     _editor.call(SCI_SETREADONLY, _mirror.call(SCI_GETREADONLY));
     restartTimer(kTimerValidate, kValidateDelayMs);
+    restartTimer(kTimerFitHeight, kFitHeightDelayMs);  // refits only if the line count changed
 }
 
 void PrettyPanel::pushToDocument(bool force) {
@@ -754,6 +796,9 @@ void PrettyPanel::onTimer(UINT_PTR id) {
         case kTimerCaretFromPanel:
             syncCaretFromPanel();
             break;
+        case kTimerFitHeight:
+            fitHeight();
+            break;
         default:
             ::KillTimer(_hwnd, id);
             break;
@@ -765,7 +810,90 @@ void PrettyPanel::restartTimer(UINT_PTR id, int delayMs) {
 }
 
 void PrettyPanel::stopTimers() {
-    for (UINT_PTR id = kTimerDocumentToPanel; id <= kTimerCaretFromPanel; ++id) ::KillTimer(_hwnd, id);
+    for (UINT_PTR id = kTimerDocumentToPanel; id <= kTimerFitHeight; ++id) ::KillTimer(_hwnd, id);
+}
+
+// ---------------------------------------------------------------------------
+// Height fitting (panel docked below the editor)
+// ---------------------------------------------------------------------------
+
+// Notepad++ has no API to size a docked panel. The docking manager is a child window of
+// Notepad++ that owns the dock containers; its splitters report drags with DMM_MOVE_SPLITTER.
+bool PrettyPanel::findDockFrame(HWND& manager, HWND& container) const {
+    manager = ::FindWindowExW(_npp._nppHandle, nullptr, kDockingManagerClass, nullptr);
+    if (!manager) return false;
+    container = nullptr;
+    for (HWND w = _hwnd; w; w = ::GetParent(w)) {
+        if (::GetParent(w) == manager) {
+            container = w;
+            break;
+        }
+    }
+    // A floating container is a popup window: nothing to fit.
+    return container && (::GetWindowLongPtrW(container, GWL_STYLE) & WS_CHILD) && ::IsWindowVisible(container);
+}
+
+HWND PrettyPanel::findSplitterAbove(const RECT& container) const {
+    SplitterSearch search{container, scale(_hwnd, 8), nullptr};
+    // Enumerates all descendants: the splitters are children of Notepad++ or of the docking manager.
+    ::EnumChildWindows(_npp._nppHandle, &findSplitterProc, reinterpret_cast<LPARAM>(&search));
+    return search.found;
+}
+
+// Sizes the bottom dock container so that the editor above shows the whole (compact) document
+// and the panel gets the remaining height. Refits only when the document's line count changes,
+// so a height set by dragging the splitter is kept while editing.
+void PrettyPanel::fitHeight() {
+    ::KillTimer(_hwnd, kTimerFitHeight);
+    if (_doc == 0 || !_visible || !_settings.autoFitHeight) return;
+    HWND view = viewShowingDocument();
+    if (!view || !::IsWindowVisible(view)) return;
+
+    auto viewCall = [view](UINT msg, WPARAM w = 0, LPARAM l = 0) { return ::SendMessageW(view, msg, w, l); };
+    sptr_t lines = viewCall(SCI_VISIBLEFROMDOCLINE, static_cast<WPARAM>(viewCall(SCI_GETLINECOUNT)));
+    const auto length = viewCall(SCI_GETLENGTH);
+    if (lines > 1 && viewCall(SCI_POSITIONFROMLINE, static_cast<WPARAM>(viewCall(SCI_GETLINECOUNT) - 1)) == length)
+        --lines;  // empty line after a trailing line break
+    lines = std::max<sptr_t>(lines, 1);
+    if (lines == _fittedLines) return;
+
+    HWND manager = nullptr;
+    HWND container = nullptr;
+    if (!findDockFrame(manager, container)) return;
+    RECT rcContainer{};
+    RECT rcView{};
+    ::GetWindowRect(container, &rcContainer);
+    ::GetWindowRect(view, &rcView);
+    if (rcContainer.top < rcView.bottom) return;  // docked left, right or at the top
+    HWND splitter = findSplitterAbove(rcContainer);
+    if (!splitter) return;
+    _fittedLines = lines;
+
+    RECT client{};
+    ::GetClientRect(view, &client);  // without the horizontal scroll bar
+    const int clientHeight = client.bottom - client.top;
+    const int containerHeight = rcContainer.bottom - rcContainer.top;
+    const int lineHeight = static_cast<int>(viewCall(SCI_TEXTHEIGHT, 0));
+    if (lineHeight <= 0) return;
+    const int needed = static_cast<int>(std::min<sptr_t>(lines, 100000)) * lineHeight + scale(_hwnd, 2);
+    const int maxHeight = (clientHeight + containerHeight) * _settings.maxEditorHeightPercent / 100;
+    const int target = std::clamp(needed, std::min(lineHeight, maxHeight), maxHeight);
+    const int delta = clientHeight - target;  // > 0: the panel grows
+    if (std::abs(delta) <= scale(_hwnd, 2)) return;
+
+    // The sign convention of DMM_MOVE_SPLITTER differs per container side: measure it.
+    auto move = [&](int offset) {
+        ::SendMessageW(manager, DMM_MOVE_SPLITTER, static_cast<WPARAM>(static_cast<INT_PTR>(offset)),
+                       reinterpret_cast<LPARAM>(splitter));
+        RECT rc{};
+        ::GetWindowRect(container, &rc);
+        return static_cast<int>(rc.bottom - rc.top);
+    };
+    const int moved = move(delta) - containerHeight;
+    if (moved == 0) return;  // limit reached or message not supported
+    const int direction = (moved > 0) == (delta > 0) ? 1 : -1;
+    const int rest = delta - moved;
+    if (direction < 0 || rest != 0) move(direction * rest);
 }
 
 // ---------------------------------------------------------------------------
